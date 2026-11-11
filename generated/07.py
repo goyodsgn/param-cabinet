@@ -1,122 +1,203 @@
-import math
 import cadquery as cq
+import math
 
 PARAMS = {
-    # main dimensions (mm)
-    "W": 750,
-    "H": 720,
-    "D": 550,
-    "leg_h": 100,
-    # carcass
-    "t": 18,
-    "back_t": 6,
+    # overall size
+    "W": 750.0,
+    "H": 720.0,
+    "D": 550.0,
+    "leg_h": 100.0,
+    "back_mode": "onset",
+    # panels
+    "t": 18.0,
+    "back_t": 10.0,
+    "divider_t": 18.0,
+    "door_t": 22.0,
+    "shelf_t": 30.0,
     # doors
-    "door_t": 18,
-    "door_max_w": 600,
-    "door_gap": 3,
+    "door_max_w": 600.0,
+    "door_gap": 2.0,
     # hinge cups
-    "cup_d": 35,
-    "cup_depth": 12,
+    "cup_d": 35.0,
+    "cup_depth": 12.0,
     "cup_edge": 22.5,
-    "hinge_end": 100,
-    "hinge_h1": 900,    # up to this door height -> 2 hinges
-    "hinge_h2": 1600,   # up to this door height -> 3 hinges, above -> 4
+    "cup_end_offset": 100.0,
+    "hinge_h1": 900.0,
+    "hinge_h2": 1600.0,
+    # shelves
+    "shelf_min_gap": 320.0,
+    "shelf_clear": 1.0,
+    # pins
+    "pin_d": 5.0,
+    "pin_len": 14.0,
+    "pin_hole_depth": 8.0,
+    "pin_out": 6.0,
+    "pin_y_off": 50.0,
+    "pin_below": 2.5,
     # legs
-    "leg_d": 40,
-    "leg_edge_gap": 30,
-    "leg_max_spacing": 600,
+    "leg_d": 40.0,
+    "leg_edge_gap": 30.0,
+    "leg_max_spacing": 600.0,
 }
 
 
-def _ceil(x):
-    return int(math.ceil(round(x, 9)))
-
-
 def _box(x0, x1, y0, y1, z0, z1):
-    return cq.Solid.makeBox(x1 - x0, y1 - y0, z1 - z0, cq.Vector(x0, y0, z0))
+    return (cq.Workplane("XY")
+            .box(x1 - x0, y1 - y0, z1 - z0, centered=False)
+            .translate((x0, y0, z0))
+            .solids().val())
+
+
+def _cyl(r, h, p, d):
+    return cq.Solid.makeCylinder(r, h, cq.Vector(*p), cq.Vector(*d))
+
+
+def _cut(solid, tool):
+    return cq.Workplane("XY").add(solid).cut(cq.Workplane("XY").add(tool)).solids().val()
 
 
 def build(params):
-    W = params["W"]
-    H = params["H"]
-    D = params["D"]
-    leg_h = params["leg_h"]
-    t = params["t"]
-    back_t = params["back_t"]
-    door_t = params["door_t"]
-    door_max_w = params["door_max_w"]
-    gap = params["door_gap"]
-    cup_d = params["cup_d"]
-    cup_depth = params["cup_depth"]
-    cup_edge = params["cup_edge"]
-    hinge_end = params["hinge_end"]
-    leg_d = params["leg_d"]
-    leg_edge_gap = params["leg_edge_gap"]
-    leg_max = params["leg_max_spacing"]
+    p = params
+    W, H, D = p["W"], p["H"], p["D"]
+    leg_h = p["leg_h"]
+    t, back_t, div_t = p["t"], p["back_t"], p["divider_t"]
+    door_t, shelf_t = p["door_t"], p["shelf_t"]
+    gap = p["door_gap"]
+    inset = (p["back_mode"] == "inset")
 
-    parts = []
-    z0 = leg_h
-    z1 = leg_h + H
+    Dc = D - door_t - gap
+    Hc = H - leg_h
+    z_bot = leg_h
+    z_top = H
+    body_d = Dc if inset else Dc - back_t     # depth of sides/top/bottom
+    inner_d = Dc - back_t                     # depth of dividers/shelves
+    clear_h = Hc - 2 * t
+
+    parts = []  # (name, solid) in order, non-panel parts
+    panels = {}  # name -> solid (vertical panels, may be cut by pin holes)
+    panel_order = []
 
     # ---- carcass ----
-    parts.append(("side_left", _box(0, t, 0, D, z0, z1)))
-    parts.append(("side_right", _box(W - t, W, 0, D, z0, z1)))
-    parts.append(("top", _box(t, W - t, 0, D - back_t, z1 - t, z1)))
-    parts.append(("bottom", _box(t, W - t, 0, D - back_t, z0, z0 + t)))
-    parts.append(("back", _box(t, W - t, D - back_t, D, z0, z1)))
+    panels["side_left"] = _box(0, t, 0, body_d, z_bot, z_top)
+    panels["side_right"] = _box(W - t, W, 0, body_d, z_bot, z_top)
+    top = _box(t, W - t, 0, body_d, z_top - t, z_top)
+    bottom = _box(t, W - t, 0, body_d, z_bot, z_bot + t)
+    if inset:
+        back = _box(t, W - t, Dc - back_t, Dc, z_bot + t, z_top - t)
+    else:
+        back = _box(0, W, Dc - back_t, Dc, z_bot, z_top)
+
+    # ---- doors count ----
+    n = max(1, math.ceil(W / p["door_max_w"]))
+    cell = W / n
+
+    # ---- dividers ----
+    div_names = []
+    for j in range(1, n):
+        xc = j * cell
+        name = f"divider_{j}"
+        panels[name] = _box(xc - div_t / 2, xc + div_t / 2, 0, inner_d,
+                            z_bot + t, z_top - t)
+        div_names.append((name, xc - div_t / 2, xc + div_t / 2))
+
+    # ---- bays ----
+    vpanels = [("side_left", 0.0, t)] + div_names + [("side_right", W - t, W)]
+    vpanels.sort(key=lambda v: v[1])
+    bays = []
+    for a, b in zip(vpanels[:-1], vpanels[1:]):
+        bays.append((a[0], a[2], b[0], b[1]))  # left panel name, xl, right panel name, xr
+
+    # ---- shelves and pins ----
+    k = max(0, math.floor((clear_h - p["shelf_min_gap"]) / (p["shelf_min_gap"] + shelf_t)))
+    space = (clear_h - k * shelf_t) / (k + 1)
+    sc = p["shelf_clear"]
+    pr = p["pin_d"] / 2.0
+    hole_d = p["pin_hole_depth"]
+    pin_out = p["pin_out"]
+    pin_len = p["pin_len"]
+
+    shelves = []
+    pins = []
+    cuts = {}
+    for (lname, xl, rname, xr) in bays:
+        for i in range(k):
+            zb = z_bot + t + space * (i + 1) + shelf_t * i
+            shelves.append(_box(xl + sc, xr - sc, 0, inner_d, zb, zb + shelf_t))
+            zc = zb - p["pin_below"]
+            for y in (p["pin_y_off"], inner_d - p["pin_y_off"]):
+                # left panel pin: from xl - hole_d to xl + pin_out
+                pins.append(_cyl(pr, pin_len, (xl - hole_d, y, zc), (1, 0, 0)))
+                cuts.setdefault(lname, []).append(
+                    _cyl(pr, hole_d, (xl - hole_d, y, zc), (1, 0, 0)))
+                # right panel pin: from xr - pin_out to xr + hole_d
+                pins.append(_cyl(pr, pin_len, (xr - pin_out, y, zc), (1, 0, 0)))
+                cuts.setdefault(rname, []).append(
+                    _cyl(pr, hole_d, (xr, y, zc), (1, 0, 0)))
+
+    for name, tools in cuts.items():
+        s = panels[name]
+        for tool in tools:
+            s = _cut(s, tool)
+        panels[name] = s
 
     # ---- doors ----
-    count = max(1, _ceil(W / door_max_w))
-    door_w = (W - (count + 1) * gap) / count
-    door_h = H - 2 * gap
+    door_w = cell - 2 * gap
+    door_h = Hc - 2 * gap
     door_z0 = leg_h + gap
-
-    if door_h <= params["hinge_h1"]:
-        n_hinges = 2
-    elif door_h <= params["hinge_h2"]:
-        n_hinges = 3
+    door_z1 = door_z0 + door_h
+    if door_h <= p["hinge_h1"]:
+        nh = 2
+    elif door_h <= p["hinge_h2"]:
+        nh = 3
     else:
-        n_hinges = 4
+        nh = 4
+    cz0 = door_z0 + p["cup_end_offset"]
+    cz1 = door_z1 - p["cup_end_offset"]
+    cup_zs = [cz0 + (cz1 - cz0) * m / (nh - 1) for m in range(nh)]
 
-    for i in range(count):
-        idx = i + 1
-        hinge_left = (idx % 2 == 1)
-        if count > 1 and count % 2 == 1 and idx == count:
-            hinge_left = False
-
-        x0 = gap + i * (door_w + gap)
+    doors = []
+    for i in range(n):
+        x0 = i * cell + gap
         x1 = x0 + door_w
-        door = _box(x0, x1, -door_t, 0, door_z0, door_z0 + door_h)
-
-        cx = x0 + cup_edge if hinge_left else x1 - cup_edge
-        zl = door_z0 + hinge_end
-        zh = door_z0 + door_h - hinge_end
-        for k in range(n_hinges):
-            zc = zl + k * (zh - zl) / (n_hinges - 1)
-            cup = cq.Solid.makeCylinder(
-                cup_d / 2.0, cup_depth,
-                cq.Vector(cx, -cup_depth, zc), cq.Vector(0, 1, 0))
-            door = door.cut(cup)
-        solids = door.Solids()
-        door = solids[0] if solids else door
-        parts.append(("door_%d" % idx, door))
+        d = _box(x0, x1, -(gap + door_t), -gap, door_z0, door_z1)
+        hinge_left = (i % 2 == 0)
+        if n > 1 and n % 2 == 1 and i == n - 1:
+            hinge_left = False
+        cx = x0 + p["cup_edge"] if hinge_left else x1 - p["cup_edge"]
+        for cz in cup_zs:
+            cup = _cyl(p["cup_d"] / 2.0, p["cup_depth"], (cx, -gap, cz), (0, -1, 0))
+            d = _cut(d, cup)
+        doors.append(d)
 
     # ---- legs ----
-    inset = leg_edge_gap + leg_d / 2.0
-    x_a, x_b = inset, W - inset
-    y_a, y_b = inset, D - inset
-    nx = _ceil((x_b - x_a) / leg_max) + 1
-    ny = _ceil((y_b - y_a) / leg_max) + 1
-    nx = max(nx, 2)
-    ny = max(ny, 2)
-    n = 1
+    r_leg = p["leg_d"] / 2.0
+    off = p["leg_edge_gap"] + r_leg
+    span_x = W - 2 * off
+    span_y = Dc - 2 * off
+    nx = math.ceil(span_x / p["leg_max_spacing"]) + 1
+    ny = math.ceil(span_y / p["leg_max_spacing"]) + 1
+    legs = []
     for ix in range(nx):
-        x = x_a + ix * (x_b - x_a) / (nx - 1)
+        x = off + span_x * ix / (nx - 1)
         for iy in range(ny):
-            y = y_a + iy * (y_b - y_a) / (ny - 1)
-            leg = cq.Solid.makeCylinder(
-                leg_d / 2.0, leg_h, cq.Vector(x, y, 0), cq.Vector(0, 0, 1))
-            parts.append(("leg_%d" % n, leg))
-            n += 1
+            y = off + span_y * iy / (ny - 1)
+            legs.append(_cyl(r_leg, leg_h, (x, y, 0), (0, 0, 1)))
 
-    return parts
+    # ---- assemble ----
+    out = []
+    out.append(("side_left", panels["side_left"]))
+    out.append(("side_right", panels["side_right"]))
+    out.append(("top", top))
+    out.append(("bottom", bottom))
+    out.append(("back", back))
+    for j in range(1, n):
+        out.append((f"divider_{j}", panels[f"divider_{j}"]))
+    for i, s in enumerate(shelves):
+        out.append((f"shelf_{i + 1}", s))
+    for i, s in enumerate(pins):
+        out.append((f"pin_{i + 1}", s))
+    for i, s in enumerate(doors):
+        out.append((f"door_{i + 1}", s))
+    for i, s in enumerate(legs):
+        out.append((f"leg_{i + 1}", s))
+    return out
