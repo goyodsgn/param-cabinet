@@ -1,28 +1,28 @@
-W=600 H=700 D=560 leg_h=100  ->  doors 1 x 594.0 mm, door height 694.0 mm, hinges 2 per door, legs 2 x 2 = 4
-  door 1: x=3.0  hinge side=left  hinge z=[203, 697]
+W=600 H=700 D=560 leg_h=100 back=onset  ->  doors 1 x 596.0 x 596.0 mm, hinges 2 per door, walls 0, shelves 0 per bay, pins 0, legs 2 x 2 = 4
+  door 1: x=2.0  hinge side=left  hinge z=[202, 598]
 rules: OK
 geometry: OK
-W=1200 H=850 D=580 leg_h=100  ->  doors 2 x 595.5 mm, door height 844.0 mm, hinges 2 per door, legs 3 x 2 = 6
-  door 1: x=3.0  hinge side=left  hinge z=[203, 847]
-  door 2: x=601.5  hinge side=right  hinge z=[203, 847]
+W=1200 H=850 D=580 leg_h=100 back=onset  ->  doors 2 x 596.0 x 746.0 mm, hinges 2 per door, walls 1, shelves 1 per bay, pins 8, legs 3 x 2 = 6
+  door 1: x=2.0  hinge side=left  hinge z=[202, 748]
+  door 2: x=602.0  hinge side=right  hinge z=[202, 748]
 rules: OK
 geometry: OK
-W=1500 H=850 D=600 leg_h=150  ->  doors 3 x 496.0 mm, door height 844.0 mm, hinges 2 per door, legs 4 x 2 = 8
-  door 1: x=3.0  hinge side=left  hinge z=[253, 897]
-  door 2: x=502.0  hinge side=right  hinge z=[253, 897]
-  door 3: x=1001.0  hinge side=right  hinge z=[253, 897]
+W=1500 H=850 D=600 leg_h=150 back=inset  ->  doors 3 x 496.0 x 696.0 mm, hinges 2 per door, walls 2, shelves 0 per bay, pins 0, legs 4 x 2 = 8
+  door 1: x=2.0  hinge side=left  hinge z=[252, 748]
+  door 2: x=502.0  hinge side=right  hinge z=[252, 748]
+  door 3: x=1002.0  hinge side=right  hinge z=[252, 748]
 rules: OK
 geometry: OK
-W=1800 H=1000 D=650 leg_h=100  ->  doors 3 x 596.0 mm, door height 994.0 mm, hinges 3 per door, legs 4 x 2 = 8
-  door 1: x=3.0  hinge side=left  hinge z=[203, 600, 997]
-  door 2: x=602.0  hinge side=right  hinge z=[203, 600, 997]
-  door 3: x=1201.0  hinge side=right  hinge z=[203, 600, 997]
+W=1800 H=1000 D=650 leg_h=100 back=onset  ->  doors 3 x 596.0 x 896.0 mm, hinges 2 per door, walls 2, shelves 1 per bay, pins 12, legs 4 x 2 = 8
+  door 1: x=2.0  hinge side=left  hinge z=[202, 898]
+  door 2: x=602.0  hinge side=right  hinge z=[202, 898]
+  door 3: x=1202.0  hinge side=right  hinge z=[202, 898]
 rules: OK
 geometry: OK
-W=2400 H=1700 D=900 leg_h=120  ->  doors 4 x 596.2 mm, door height 1694.0 mm, hinges 4 per door, legs 5 x 3 = 15
-  door 1: x=3.0  hinge side=left  hinge z=[223, 721, 1219, 1717]
-  door 2: x=602.2  hinge side=right  hinge z=[223, 721, 1219, 1717]
-  door 3: x=1201.5  hinge side=left  hinge z=[223, 721, 1219, 1717]
-  door 4: x=1800.8  hinge side=right  hinge z=[223, 721, 1219, 1717]
+W=2400 H=1700 D=900 leg_h=120 back=onset  ->  doors 4 x 596.0 x 1576.0 mm, hinges 3 per door, walls 3, shelves 3 per bay, pins 48, legs 5 x 3 = 15
+  door 1: x=2.0  hinge side=left  hinge z=[222, 910, 1598]
+  door 2: x=602.0  hinge side=right  hinge z=[222, 910, 1598]
+  door 3: x=1202.0  hinge side=left  hinge z=[222, 910, 1598]
+  door 4: x=1802.0  hinge side=right  hinge z=[222, 910, 1598]
 rules: OK
 geometry: OK
