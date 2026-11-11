@@ -15,7 +15,12 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from cabinet_reference import Params, compute_layout  # noqa: E402
+from cabinet_reference import Params, compute_layout, pin_ys, validate  # noqa: E402
+
+# Keys a customer may change, and absolute rules that must keep the company value
+OVERRIDABLE = ["W", "H", "D", "leg_h", "back_mode", "t", "back_t", "divider_t", "door_t", "shelf_t",
+               "n_doors", "n_shelves", "shelf_min_gap"]
+ABSOLUTE = {"door_gap": 2.0, "door_max_w": 600.0, "pin_max_spacing": 500.0, "leg_max_spacing": 600.0}
 
 TOL = 1.0
 CUP_R = 17.5
@@ -57,7 +62,8 @@ def evaluate(path, overrides=None):
         params = dict(getattr(mod, "PARAMS"))
         res["params_found"] = sorted(k for k in ("W", "H", "D", "leg_h") if k in params)
         res["param_count"] = len(params)
-        res["defaults"] = {k: params.get(k) for k in ("W", "H", "D", "leg_h")}
+        res["defaults"] = {k: params.get(k) for k in OVERRIDABLE + list(ABSOLUTE)}
+        res["notes"] = list(params.get("notes") or [])
         if overrides:
             params.update(overrides)
         parts = [(n, as_shape(s)) for n, s in mod.build(params)]
@@ -74,9 +80,20 @@ def evaluate(path, overrides=None):
         res["pass"] = False
         return res
     checks["params"] = True
-    p = Params(W=float(params["W"]), H=float(params["H"]), D=float(params["D"]),
-               leg_h=float(params["leg_h"]), back_mode=str(params.get("back_mode", "onset")))
+    kw = {}
+    for k in OVERRIDABLE:
+        v = params.get(k)
+        if v is None:
+            continue
+        kw[k] = str(v) if k == "back_mode" else (int(v) if k in ("n_doors", "n_shelves") else float(v))
+    p = Params(**kw)
     lay = compute_layout(p)
+    # Absolute rules: the model kept the company values and its layout breaks none of them
+    abs_vals_ok = all(params.get(k) is None or abs(float(params[k]) - v) < 1e-6 for k, v in ABSOLUTE.items())
+    abs_errs = [e for e in validate(p, lay) if e.startswith("ABSOLUTE")]
+    checks["absolute_rules"] = abs_vals_ok and not abs_errs
+    res["absolute_errors"] = abs_errs
+    res["layout"] = {"doors": lay.n_doors, "shelves": lay.n_shelves}
     names = [n for n, _ in parts]
 
     # Every part is a valid solid with volume
@@ -98,12 +115,13 @@ def evaluate(path, overrides=None):
     checks["door_count"] = len(doors) == lay.n_doors
     checks["divider_count"] = n_div == len(lay.dividers)
     checks["shelf_count"] = n_shelf == lay.n_shelves * bays
-    checks["pin_count"] = n_pin == 4 * lay.n_shelves * bays
+    pins_expected = 2 * len(pin_ys(p)) * lay.n_shelves * bays
+    checks["pin_count"] = n_pin == pins_expected
     checks["leg_count"] = len(legs) == len(lay.legs)
     res["got"] = {"doors": len(doors), "dividers": n_div, "shelves": n_shelf, "pins": n_pin,
                   "legs": len(legs)}
     res["expected"] = {"doors": lay.n_doors, "hinges": lay.n_hinges, "dividers": len(lay.dividers),
-                       "shelves": lay.n_shelves * bays, "pins": 4 * lay.n_shelves * bays,
+                       "shelves": lay.n_shelves * bays, "pins": pins_expected,
                        "legs": len(lay.legs), "sides": [d.hinge_side for d in lay.doors]}
 
     # Door gap: every door matches the reference door rectangle (x, z, w, h) and hangs door_gap

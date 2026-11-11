@@ -78,13 +78,15 @@ def subdivide(tris, max_edge):
 
 
 def render(meshes, size, path, title="", doors=None, cups=None, cup_d=35.0, legs=None, carcass=None,
-           inside=None, y_front=-40.0):
+           inside=None, y_front=-40.0, side=None):
     """meshes: list of (name, triangles). size: (W, D, H) for equal scaling.
     doors: list of (x, z, w, h) and cups: list of (x, z) for the front elevation panel."""
     W, D, H = size
-    ncol = 1 + bool(doors) + bool(inside)
-    fig = plt.figure(figsize=(5.5 * ncol, 5), dpi=130)
-    ax = fig.add_subplot(1, ncol, 1, projection="3d")
+    n = 1 + bool(doors) + bool(inside) + bool(side)
+    nrow, ncol = (2, 2) if n == 4 else (1, n)
+    fig = plt.figure(figsize=(5.5 * ncol, 4.6 * nrow), dpi=130)
+    slots = iter(range(2, n + 1))
+    ax = fig.add_subplot(nrow, ncol, 1, projection="3d")
     # One collection for everything so triangles are depth-sorted together.
     all_tris, all_fc = [], []
     for name, tris in meshes:
@@ -101,7 +103,7 @@ def render(meshes, size, path, title="", doors=None, cups=None, cup_d=35.0, legs
     ax.view_init(elev=ELEV, azim=AZIM)
     ax.set_axis_off()
     if doors:
-        ax2 = fig.add_subplot(1, ncol, 2)
+        ax2 = fig.add_subplot(nrow, ncol, next(slots))
         if carcass:
             ax2.add_patch(plt.Rectangle((0, carcass[0]), W, carcass[1], fill=False, ec="#999999", lw=0.8))
         for (x, w, h) in legs or []:
@@ -116,7 +118,7 @@ def render(meshes, size, path, title="", doors=None, cups=None, cup_d=35.0, legs
         ax2.axis("off")
         ax2.set_title("Front, hinge cups seen through the doors", fontsize=9, color="#555555")
     if inside:
-        ax3 = fig.add_subplot(1, ncol, ncol)
+        ax3 = fig.add_subplot(nrow, ncol, next(slots))
         for (x, z, w, h) in inside:
             ax3.add_patch(plt.Rectangle((x, z), w, h, fc="#e1e1e1", ec="#8c8c8c", lw=0.6))
         for (x, w, h) in legs or []:
@@ -126,6 +128,25 @@ def render(meshes, size, path, title="", doors=None, cups=None, cup_d=35.0, legs
         ax3.set_aspect("equal")
         ax3.axis("off")
         ax3.set_title("Front, doors removed: walls and shelves", fontsize=9, color="#555555")
+    if side:
+        ax4 = fig.add_subplot(nrow, ncol, next(slots))
+        for (y, z, dy, dz) in side["panels"]:
+            ax4.add_patch(plt.Rectangle((y, z), dy, dz, fc="#efefef", ec="#8c8c8c", lw=0.6))
+        for (y, z, dy, dz) in side["shelves"]:
+            ax4.add_patch(plt.Rectangle((y, z), dy, dz, fc="#d6d6d6", ec="#8c8c8c", lw=0.6))
+        y, z, dy, dz = side["door"]
+        ax4.add_patch(plt.Rectangle((y, z), dy, dz, fc=COLORS["door"], ec="#8a7454", lw=0.6))
+        for (y, w, h) in side["legs"]:
+            ax4.add_patch(plt.Rectangle((y, 0), w, h, fc="#737378", ec="none"))
+        r = max(side["pin_d"] / 2, side["H"] / 100)
+        for (y, z) in side["pins"]:
+            ax4.add_patch(plt.Circle((y, z), r, fc="#c0392b", ec="none"))
+        ax4.set_xlim(side["y0"] - 40, side["y0"] + side["D"] + 40)
+        ax4.set_ylim(-40, side["H"] + 40)
+        ax4.set_aspect("equal")
+        ax4.axis("off")
+        ax4.set_title("Side (front on the left): shelf pins on the left panel in red",
+                      fontsize=9, color="#555555")
     if title:
         fig.text(0.5, 0.04, title, ha="center", fontsize=11, color="#333333")
     fig.savefig(path, bbox_inches="tight", pad_inches=0.1, facecolor="white")

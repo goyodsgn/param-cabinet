@@ -24,6 +24,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--model", default=DEFAULT_MODEL)
+    ap.add_argument("--sentences", default="experiment/sentences.csv")
+    ap.add_argument("--out-dir", default="generated")
     args = ap.parse_args()
 
     if not os.environ.get("ANTHROPIC_API_KEY"):
@@ -33,10 +35,10 @@ def main():
 
     client = anthropic.Anthropic()
     system = open(os.path.join(ROOT, "prompts", "system.md"), encoding="utf-8").read()
-    rows = list(csv.DictReader(open(os.path.join(ROOT, "experiment", "sentences.csv"), encoding="utf-8")))
+    rows = list(csv.DictReader(open(os.path.join(ROOT, args.sentences), encoding="utf-8")))
     if args.limit:
         rows = rows[: args.limit]
-    out_dir = os.path.join(ROOT, "generated")
+    out_dir = os.path.join(ROOT, args.out_dir)
     os.makedirs(out_dir, exist_ok=True)
 
     for row in rows:

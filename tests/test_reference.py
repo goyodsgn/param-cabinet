@@ -1,6 +1,6 @@
 import pytest
 
-from cabinet_reference import Params, compute_layout, validate, shelf_count
+from cabinet_reference import Params, compute_layout, validate, shelf_count, pin_ys
 
 # (W, H, D, leg_h) -> doors, hinges per door, inner walls, shelves per bay
 CASES = [
@@ -78,6 +78,26 @@ def test_geometry(W, H, D, leg_h, n_doors, n_hinges, n_walls, n_shelves, back_mo
     assert sum(n.startswith("door_") for n in names) == n_doors
     assert sum(n.startswith("divider_") for n in names) == n_walls
     assert sum(n.startswith("shelf_") for n in names) == n_shelves * (n_walls + 1)
-    assert sum(n.startswith("pin_") for n in names) == 4 * n_shelves * (n_walls + 1)
+    assert sum(n.startswith("pin_") for n in names) == 2 * len(pin_ys(p)) * n_shelves * (n_walls + 1)
     assert check_solids(parts) == []
     assert bbox_size(parts) == pytest.approx((W, D, H), abs=1e-3)
+
+
+@pytest.mark.parametrize("D,per_side", [(580, 2), (700, 3), (900, 3), (1200, 4)])
+def test_more_pins_for_deeper_shelves(D, per_side):
+    p = Params(D=D)
+    ys = pin_ys(p)
+    assert len(ys) == per_side
+    assert all(b - a <= p.pin_max_spacing + 1e-9 for a, b in zip(ys, ys[1:]))
+
+
+def test_customer_can_add_doors_and_set_shelves():
+    p = Params(W=1200, n_doors=3, n_shelves=3)
+    lay = compute_layout(p)
+    assert lay.n_doors == 3 and len(lay.dividers) == 2 and lay.n_shelves == 3
+    assert validate(p, lay) == []
+
+
+def test_customer_cannot_make_doors_wider_than_600():
+    errs = validate(Params(W=1800, n_doors=2))
+    assert any(e.startswith("ABSOLUTE") for e in errs)

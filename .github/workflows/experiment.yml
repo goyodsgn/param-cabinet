@@ -9,6 +9,9 @@ on:
       model:
         description: "Model name"
         default: "claude-sonnet-5-5"
+      set:
+        description: "Sentence set: basic or priority"
+        default: "basic"
 
 permissions:
   contents: write
@@ -23,16 +26,27 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
+      - name: Pick the sentence set
+        run: |
+          if [ "${{ inputs.set }}" = "priority" ]; then
+            echo "SENT=experiment/sentences_priority.csv" >> $GITHUB_ENV
+            echo "GEN=generated_priority" >> $GITHUB_ENV
+            echo "OUT=results/step3_priority" >> $GITHUB_ENV
+          else
+            echo "SENT=experiment/sentences.csv" >> $GITHUB_ENV
+            echo "GEN=generated" >> $GITHUB_ENV
+            echo "OUT=results/step3" >> $GITHUB_ENV
+          fi
       - name: Generate models with the LLM
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python experiment/generate.py --limit ${{ inputs.limit }} --model ${{ inputs.model }}
+        run: rm -rf $GEN && python experiment/generate.py --limit ${{ inputs.limit }} --model ${{ inputs.model }} --sentences $SENT --out-dir $GEN
       - name: Run and check every generated model
-        run: python experiment/run_generated.py --dir generated --out results/step3
+        run: python experiment/run_generated.py --dir $GEN --out $OUT --sentences $SENT
       - name: Save generated code and results to the repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add generated results
+          git add $GEN results
           git diff --cached --quiet || (git commit -m "Step 3 results [skip ci]" && git pull --rebase && git push)
-      - run: cat results/step3.md >> "$GITHUB_STEP_SUMMARY"
+      - run: cat $OUT.md >> "$GITHUB_STEP_SUMMARY"
