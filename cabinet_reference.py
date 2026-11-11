@@ -213,7 +213,7 @@ def check_solids(parts) -> list:
     return errs
 
 
-def export(parts, stem: str):
+def export(parts, stem: str, p: Params | None = None, lay: Layout | None = None):
     import cadquery as cq
 
     comp = cq.Compound.makeCompound([s for _, s in parts])
@@ -224,6 +224,15 @@ def export(parts, stem: str):
         "projectionDir": (-1.2, -2.0, 0.9),
         "showAxes": False, "showHidden": False,
     })
+    if p is not None:
+        from render import mesh_of, render
+
+        lay = lay or compute_layout(p)
+        cups = [c for door_cups in lay.hinge_centers(p) for c in door_cups]
+        title = (f"{p.W:.0f} x {p.H:.0f} mm  ·  {lay.n_doors} door(s)  ·  "
+                 f"{lay.n_hinges} hinges each")
+        render([(n, mesh_of(s)) for n, s in parts], (p.W, p.D, p.H), f"{stem}.png", title,
+               doors=[(d.x, d.z, d.w, d.h) for d in lay.doors], cups=cups, cup_d=p.hinge_cup_d)
 
 
 # ---------------------------------------------------------------
@@ -252,4 +261,4 @@ if __name__ == "__main__":
     gerrs = check_solids(parts)
     print("geometry:", "OK" if not gerrs else gerrs)
     out = sys.argv[3] if len(sys.argv) >= 4 else "."
-    export(parts, f"{out}/cabinet_{int(p.W)}x{int(p.H)}")
+    export(parts, f"{out}/cabinet_{int(p.W)}x{int(p.H)}", p, lay)
