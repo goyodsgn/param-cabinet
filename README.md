@@ -14,3 +14,10 @@ change width and height, and the number of doors and hinges follows the rules.
 
 Every push runs the tests on GitHub Actions and builds sample cabinets (STEP, STL, SVG)
 as a downloadable artifact.
+
+## Preview
+
+![1200 x 850, two doors](previews/cabinet_1200x850.svg)
+![2400 x 1700, four doors](previews/cabinet_2400x1700.svg)
+
+Rule check results for each size: [previews/summary.txt](previews/summary.txt)
