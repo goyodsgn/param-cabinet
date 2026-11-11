@@ -154,7 +154,8 @@ def min_door_count(p: Params) -> int:
 
 
 def door_count(p: Params) -> int:
-    return p.n_doors if p.n_doors else min_door_count(p)
+    """Customer may ask for more doors, never fewer than the absolute minimum."""
+    return max(p.n_doors or 0, min_door_count(p))
 
 
 def pin_ys(p: Params) -> list:

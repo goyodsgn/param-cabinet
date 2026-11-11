@@ -55,10 +55,10 @@ def cup_faces(shape):
     return out
 
 
-def evaluate(path, overrides=None):
+def evaluate(path, overrides=None, mod=None):
     res = {"runs": False, "error": ""}
     try:
-        mod = load(path)
+        mod = mod or load(path)
         params = dict(getattr(mod, "PARAMS"))
         res["params_found"] = sorted(k for k in ("W", "H", "D", "leg_h") if k in params)
         res["param_count"] = len(params)

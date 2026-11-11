@@ -1,0 +1,32 @@
+name: robustness
+
+on:
+  workflow_dispatch:
+    inputs:
+      n:
+        description: "Sizes per model"
+        default: "30"
+
+permissions:
+  contents: write
+
+jobs:
+  step4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Resize every generated model and check the rules
+        run: python experiment/robustness.py --dirs generated generated_priority --n ${{ inputs.n }} --out results/step4
+      - name: Save results to the repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add results
+          git diff --cached --quiet || (git commit -m "Step 4 results [skip ci]" && git pull --rebase && git push)
+      - run: cat results/step4.md >> "$GITHUB_STEP_SUMMARY"

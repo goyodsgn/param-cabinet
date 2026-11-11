@@ -99,5 +99,5 @@ def test_customer_can_add_doors_and_set_shelves():
 
 
 def test_customer_cannot_make_doors_wider_than_600():
-    errs = validate(Params(W=1800, n_doors=2))
-    assert any(e.startswith("ABSOLUTE") for e in errs)
+    lay = compute_layout(Params(W=1800, n_doors=2))
+    assert lay.n_doors == 3
