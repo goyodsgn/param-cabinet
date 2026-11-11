@@ -1,6 +1,6 @@
 # Step 3 results: 10 / 10 pass all checks
 
-| id | runs | read request | params | solids | carcass_parts | door_count | hinge_count | hinge_sides | leg_count | overall_size | params | error |
+| id | runs | read request | params | solids | carcass_parts | door_count | hinge_count | hinge_sides | leg_count | overall_size | param count | error |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 01 | O | O | O | O | O | O | O | O | O | O | 18 |  |
 | 02 | O | O | O | O | O | O | O | O | O | O | 18 |  |

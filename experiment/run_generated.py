@@ -70,7 +70,7 @@ def main():
 
     n = len(rows)
     lines = [f"# Step 3 results: {sum(r['pass'] for r in rows)} / {n} pass all checks", "",
-             "| id | runs | read request | " + " | ".join(CHECKS) + " | params | error |",
+             "| id | runs | read request | " + " | ".join(CHECKS) + " | param count | error |",
              "|" + "---|" * (len(CHECKS) + 5)]
     for r in rows:
         lines.append(f"| {r['id']} | {mark(r['runs'])} | {mark(r['read_request'])} | "
