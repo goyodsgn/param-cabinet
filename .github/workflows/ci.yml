@@ -20,6 +20,12 @@ jobs:
         run: pip install -r requirements.txt
       - name: Test
         run: pytest -v
+      - name: Evaluator smoke test (reference must pass every check)
+        run: |
+          python experiment/evaluate_one.py examples/reference_generated.py | tee eval.json
+          python -c "import json,sys; r=json.load(open('eval.json')); print(r.get('checks')); sys.exit(0 if r.get('pass') else 1)"
+          python experiment/evaluate_one.py examples/reference_generated.py '{"W": 2400, "H": 1700, "D": 900, "leg_h": 120}' | tee eval2.json
+          python -c "import json,sys; r=json.load(open('eval2.json')); print(r.get('checks')); sys.exit(0 if r.get('pass') else 1)"
       - name: Build sample cabinets
         run: |
           mkdir -p outputs
