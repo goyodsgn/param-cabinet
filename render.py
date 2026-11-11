@@ -6,7 +6,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-COLORS = {"door": (0.85, 0.76, 0.62), "carcass": (0.88, 0.88, 0.88)}
+COLORS = {"door": (0.85, 0.76, 0.62), "carcass": (0.88, 0.88, 0.88), "leg": (0.45, 0.45, 0.47)}
 LIGHT = (-0.45, -0.75, 0.5)  # from front-left-above
 
 
@@ -77,7 +77,7 @@ def subdivide(tris, max_edge):
     return out
 
 
-def render(meshes, size, path, title="", doors=None, cups=None, cup_d=35.0):
+def render(meshes, size, path, title="", doors=None, cups=None, cup_d=35.0, legs=None, carcass=None):
     """meshes: list of (name, triangles). size: (W, D, H) for equal scaling.
     doors: list of (x, z, w, h) and cups: list of (x, z) for the front elevation panel."""
     W, D, H = size
@@ -86,7 +86,8 @@ def render(meshes, size, path, title="", doors=None, cups=None, cup_d=35.0):
     # One collection for everything so triangles are depth-sorted together.
     all_tris, all_fc = [], []
     for name, tris in meshes:
-        color = COLORS["door"] if name.startswith("door") else COLORS["carcass"]
+        color = (COLORS["door"] if name.startswith("door")
+                 else COLORS["leg"] if name.startswith("leg") else COLORS["carcass"])
         tris = subdivide(front_facing(tris), max(W, H) / 40)
         all_tris += tris
         all_fc += shaded(tris, color)
@@ -99,7 +100,10 @@ def render(meshes, size, path, title="", doors=None, cups=None, cup_d=35.0):
     ax.set_axis_off()
     if doors:
         ax2 = fig.add_subplot(1, 2, 2)
-        ax2.add_patch(plt.Rectangle((0, 0), W, H, fill=False, ec="#999999", lw=0.8))
+        if carcass:
+            ax2.add_patch(plt.Rectangle((0, carcass[0]), W, carcass[1], fill=False, ec="#999999", lw=0.8))
+        for (x, w, h) in legs or []:
+            ax2.add_patch(plt.Rectangle((x, 0), w, h, fc="#737378", ec="none"))
         for (x, z, w, h) in doors:
             ax2.add_patch(plt.Rectangle((x, z), w, h, fc=COLORS["door"], ec="#8a7454", lw=0.8))
         for (x, z) in cups or []:

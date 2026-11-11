@@ -23,7 +23,7 @@ jobs:
       - name: Build sample cabinets
         run: |
           mkdir -p outputs
-          for size in "600 700" "1200 850" "1500 850" "1800 1000" "2400 1700"; do
+          for size in "600 700 560 100" "1200 850 580 100" "1500 850 600 150" "1800 1000 650 100" "2400 1700 900 120"; do
             python cabinet_reference.py $size outputs | tee -a outputs/summary.txt
           done
       - uses: actions/upload-artifact@v4
@@ -34,7 +34,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           mkdir -p previews
-          rm -f previews/*.svg && cp outputs/*.png outputs/summary.txt previews/
+          rm -f previews/*.svg previews/*.png && cp outputs/*.png outputs/summary.txt previews/
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add previews
