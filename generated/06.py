@@ -1,0 +1,115 @@
+import math
+import cadquery as cq
+
+PARAMS = {
+    "W": 2400.0,          # width (2.4 m)
+    "H": 1700.0,          # carcass height (1.7 m)
+    "D": 900.0,           # depth (90 cm)
+    "leg_h": 120.0,       # leg height
+    "t": 18.0,            # carcass panel thickness
+    "back_t": 6.0,        # back panel thickness
+    "door_max_w": 600.0,
+    "door_gap": 3.0,
+    "door_t": 18.0,
+    "cup_d": 35.0,
+    "cup_depth": 12.0,
+    "cup_edge": 22.5,     # cup center from hinge-side edge
+    "cup_end": 100.0,     # first/last cup from door top/bottom edge
+    "hinge_h1": 900.0,    # up to -> 2 hinges
+    "hinge_h2": 1600.0,   # up to -> 3 hinges, above -> 4
+    "leg_d": 40.0,
+    "leg_inset": 30.0,    # gap leg edge to carcass edge
+    "leg_max_pitch": 600.0,
+}
+
+
+def _box(x0, x1, y0, y1, z0, z1):
+    return cq.Solid.makeBox(x1 - x0, y1 - y0, z1 - z0, pnt=cq.Vector(x0, y0, z0))
+
+
+def _solid(shape):
+    if isinstance(shape, cq.Solid):
+        return shape
+    sols = shape.Solids()
+    return sols[0]
+
+
+def build(params):
+    W = params["W"]
+    H = params["H"]
+    D = params["D"]
+    leg_h = params["leg_h"]
+    t = params["t"]
+    back_t = params["back_t"]
+    door_max_w = params["door_max_w"]
+    gap = params["door_gap"]
+    door_t = params["door_t"]
+    cup_d = params["cup_d"]
+    cup_depth = params["cup_depth"]
+    cup_edge = params["cup_edge"]
+    cup_end = params["cup_end"]
+    leg_d = params["leg_d"]
+    leg_inset = params["leg_inset"]
+    max_pitch = params["leg_max_pitch"]
+
+    parts = []
+    z0 = leg_h
+    z1 = leg_h + H
+
+    # Carcass
+    parts.append(("side_left", _box(0, t, 0, D, z0, z1)))
+    parts.append(("side_right", _box(W - t, W, 0, D, z0, z1)))
+    parts.append(("top", _box(t, W - t, 0, D - back_t, z1 - t, z1)))
+    parts.append(("bottom", _box(t, W - t, 0, D - back_t, z0, z0 + t)))
+    parts.append(("back", _box(t, W - t, D - back_t, D, z0, z1)))
+
+    # Doors
+    count = max(1, math.ceil(W / door_max_w))
+    door_w = (W - (count + 1) * gap) / count
+    door_h = H - 2 * gap
+    door_zb = leg_h + gap
+
+    if door_h <= params["hinge_h1"]:
+        n_h = 2
+    elif door_h <= params["hinge_h2"]:
+        n_h = 3
+    else:
+        n_h = 4
+
+    for i in range(count):
+        x0 = gap + i * (door_w + gap)
+        door = _box(x0, x0 + door_w, -door_t, 0, door_zb, door_zb + door_h)
+
+        hinge_left = (i % 2 == 0)
+        if count > 1 and count % 2 == 1 and i == count - 1:
+            hinge_left = False
+
+        cx = x0 + cup_edge if hinge_left else x0 + door_w - cup_edge
+        z_first = door_zb + cup_end
+        z_last = door_zb + door_h - cup_end
+        for k in range(n_h):
+            cz = z_first + k * (z_last - z_first) / (n_h - 1)
+            cyl = cq.Solid.makeCylinder(
+                cup_d / 2.0, cup_depth,
+                cq.Vector(cx, 0, cz), cq.Vector(0, -1, 0))
+            door = _solid(door.cut(cyl))
+
+        parts.append(("door_%d" % (i + 1), door))
+
+    # Legs
+    off = leg_inset + leg_d / 2.0
+    span_x = W - 2 * off
+    span_y = D - 2 * off
+    nx = math.ceil(span_x / max_pitch) + 1
+    ny = math.ceil(span_y / max_pitch) + 1
+    idx = 1
+    for ix in range(nx):
+        lx = off + ix * span_x / (nx - 1)
+        for iy in range(ny):
+            ly = off + iy * span_y / (ny - 1)
+            leg = cq.Solid.makeCylinder(
+                leg_d / 2.0, leg_h, cq.Vector(lx, ly, 0), cq.Vector(0, 0, 1))
+            parts.append(("leg_%d" % idx, leg))
+            idx += 1
+
+    return parts
