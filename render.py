@@ -77,12 +77,14 @@ def subdivide(tris, max_edge):
     return out
 
 
-def render(meshes, size, path, title="", doors=None, cups=None, cup_d=35.0, legs=None, carcass=None):
+def render(meshes, size, path, title="", doors=None, cups=None, cup_d=35.0, legs=None, carcass=None,
+           inside=None, y_front=-40.0):
     """meshes: list of (name, triangles). size: (W, D, H) for equal scaling.
     doors: list of (x, z, w, h) and cups: list of (x, z) for the front elevation panel."""
     W, D, H = size
-    fig = plt.figure(figsize=(11, 5), dpi=130)
-    ax = fig.add_subplot(1, 2, 1, projection="3d")
+    ncol = 1 + bool(doors) + bool(inside)
+    fig = plt.figure(figsize=(5.5 * ncol, 5), dpi=130)
+    ax = fig.add_subplot(1, ncol, 1, projection="3d")
     # One collection for everything so triangles are depth-sorted together.
     all_tris, all_fc = [], []
     for name, tris in meshes:
@@ -93,13 +95,13 @@ def render(meshes, size, path, title="", doors=None, cups=None, cup_d=35.0, legs
         all_fc += shaded(tris, color)
     ax.add_collection3d(Poly3DCollection(all_tris, facecolors=all_fc, edgecolors=all_fc, linewidth=0.3))
     ax.set_xlim(0, W)
-    ax.set_ylim(-40, D)
+    ax.set_ylim(y_front, y_front + D)
     ax.set_zlim(0, H)
-    ax.set_box_aspect((W, D + 40, H))
+    ax.set_box_aspect((W, D, H))
     ax.view_init(elev=ELEV, azim=AZIM)
     ax.set_axis_off()
     if doors:
-        ax2 = fig.add_subplot(1, 2, 2)
+        ax2 = fig.add_subplot(1, ncol, 2)
         if carcass:
             ax2.add_patch(plt.Rectangle((0, carcass[0]), W, carcass[1], fill=False, ec="#999999", lw=0.8))
         for (x, w, h) in legs or []:
@@ -113,6 +115,17 @@ def render(meshes, size, path, title="", doors=None, cups=None, cup_d=35.0, legs
         ax2.set_aspect("equal")
         ax2.axis("off")
         ax2.set_title("Front, hinge cups seen through the doors", fontsize=9, color="#555555")
+    if inside:
+        ax3 = fig.add_subplot(1, ncol, ncol)
+        for (x, z, w, h) in inside:
+            ax3.add_patch(plt.Rectangle((x, z), w, h, fc="#e1e1e1", ec="#8c8c8c", lw=0.6))
+        for (x, w, h) in legs or []:
+            ax3.add_patch(plt.Rectangle((x, 0), w, h, fc="#737378", ec="none"))
+        ax3.set_xlim(-40, W + 40)
+        ax3.set_ylim(-40, H + 40)
+        ax3.set_aspect("equal")
+        ax3.axis("off")
+        ax3.set_title("Front, doors removed: walls and shelves", fontsize=9, color="#555555")
     if title:
         fig.text(0.5, 0.04, title, ha="center", fontsize=11, color="#333333")
     fig.savefig(path, bbox_inches="tight", pad_inches=0.1, facecolor="white")

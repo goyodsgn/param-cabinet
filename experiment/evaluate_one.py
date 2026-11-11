@@ -75,7 +75,7 @@ def evaluate(path, overrides=None):
         return res
     checks["params"] = True
     p = Params(W=float(params["W"]), H=float(params["H"]), D=float(params["D"]),
-               leg_h=float(params["leg_h"]))
+               leg_h=float(params["leg_h"]), back_mode=str(params.get("back_mode", "onset")))
     lay = compute_layout(p)
     names = [n for n, _ in parts]
 
@@ -91,11 +91,30 @@ def evaluate(path, overrides=None):
     doors = sorted([(n, s) for n, s in parts if n.startswith("door_")],
                    key=lambda x: x[1].BoundingBox().xmin)
     legs = [s for n, s in parts if n.startswith("leg_")]
+    n_div = sum(n.startswith("divider_") for n in names)
+    n_shelf = sum(n.startswith("shelf_") for n in names)
+    n_pin = sum(n.startswith("pin_") for n in names)
+    bays = len(lay.bays)
     checks["door_count"] = len(doors) == lay.n_doors
+    checks["divider_count"] = n_div == len(lay.dividers)
+    checks["shelf_count"] = n_shelf == lay.n_shelves * bays
+    checks["pin_count"] = n_pin == 4 * lay.n_shelves * bays
     checks["leg_count"] = len(legs) == len(lay.legs)
-    res["got"] = {"doors": len(doors), "legs": len(legs)}
-    res["expected"] = {"doors": lay.n_doors, "hinges": lay.n_hinges, "legs": len(lay.legs),
-                       "sides": [d.hinge_side for d in lay.doors]}
+    res["got"] = {"doors": len(doors), "dividers": n_div, "shelves": n_shelf, "pins": n_pin,
+                  "legs": len(legs)}
+    res["expected"] = {"doors": lay.n_doors, "hinges": lay.n_hinges, "dividers": len(lay.dividers),
+                       "shelves": lay.n_shelves * bays, "pins": 4 * lay.n_shelves * bays,
+                       "legs": len(lay.legs), "sides": [d.hinge_side for d in lay.doors]}
+
+    # Door gap: every door matches the reference door rectangle (x, z, w, h) and hangs door_gap
+    # in front of the carcass (its back face at y = -door_gap)
+    gap_ok = len(doors) == lay.n_doors
+    for (_, s), d in zip(doors, lay.doors):
+        bb = s.BoundingBox()
+        if (abs(bb.xmin - d.x) > TOL or abs(bb.xlen - d.w) > TOL or abs(bb.zmin - d.z) > TOL
+                or abs(bb.zlen - d.h) > TOL or abs(bb.ymax + p.door_gap) > TOL):
+            gap_ok = False
+    checks["door_gap"] = gap_ok
 
     # Hinge cups per door and hinge side
     hinge_ok, side_ok, sides, counts = True, True, [], []
@@ -123,9 +142,8 @@ def evaluate(path, overrides=None):
 
         bb = cq.Compound.makeCompound([s for _, s in parts]).BoundingBox()
         res["got"]["bbox"] = [round(v, 1) for v in (bb.xmin, bb.xmax, bb.ymin, bb.ymax, bb.zmin, bb.zmax)]
-        checks["overall_size"] = (abs(bb.xmin) < TOL and abs(bb.xmax - p.W) < TOL
-                                  and abs(bb.zmin) < TOL and abs(bb.zmax - (p.leg_h + p.H)) < TOL
-                                  and abs(bb.ymax - p.D) < TOL and abs(bb.ymin + p.door_t) < TOL)
+        checks["overall_size"] = (abs(bb.xlen - p.W) < TOL and abs(bb.ylen - p.D) < TOL
+                                  and abs(bb.zlen - p.H) < TOL and abs(bb.zmin) < TOL)
     except Exception:  # noqa: BLE001
         checks["overall_size"] = False
 

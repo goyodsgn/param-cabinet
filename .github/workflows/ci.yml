@@ -24,12 +24,12 @@ jobs:
         run: |
           python experiment/evaluate_one.py examples/reference_generated.py | tee eval.json
           python -c "import json,sys; r=json.load(open('eval.json')); print(r.get('checks')); sys.exit(0 if r.get('pass') else 1)"
-          python experiment/evaluate_one.py examples/reference_generated.py '{"W": 2400, "H": 1700, "D": 900, "leg_h": 120}' | tee eval2.json
+          python experiment/evaluate_one.py examples/reference_generated.py '{"W": 2400, "H": 1700, "D": 900, "leg_h": 120, "back_mode": "inset"}' | tee eval2.json
           python -c "import json,sys; r=json.load(open('eval2.json')); print(r.get('checks')); sys.exit(0 if r.get('pass') else 1)"
       - name: Build sample cabinets
         run: |
           mkdir -p outputs
-          for size in "600 700 560 100" "1200 850 580 100" "1500 850 600 150" "1800 1000 650 100" "2400 1700 900 120"; do
+          for size in "600 700 560 100 onset" "1200 850 580 100 onset" "1500 850 600 150 inset" "1800 1000 650 100 onset" "2400 1700 900 120 onset"; do
             python cabinet_reference.py $size outputs | tee -a outputs/summary.txt
           done
       - uses: actions/upload-artifact@v4

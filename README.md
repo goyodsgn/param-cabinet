@@ -5,16 +5,18 @@ AI-generated parametric CAD: a base cabinet whose doors and hinges follow size r
 Work in progress. Step 1 is the hand-written reference model (`cabinet_reference.py`):
 change width and height, and the number of doors and hinges follows the rules.
 
-| Rule | Example value |
-| --- | --- |
-| Max door width | 600 mm (more doors when exceeded) |
-| Gap between doors | 3 mm |
-| Hinges per door | 2 up to 900 mm door height, 3 up to 1600 mm, 4 above |
-| First hinge from door edge | 100 mm |
-| Door hinge sides | facing pairs (L R L R ...); an odd last door hinges on the right |
-| Legs | corners with a 30 mm margin, middle legs added so spacing stays within 600 mm |
+W, D, H are the overall bounding box (doors and legs included). Full rule list: `prompts/system.md`.
 
-Parameters include width W, height H, depth D and leg height `leg_h`.
+| Rule | Default |
+| --- | --- |
+| Doors | overlay, one more per 600 mm of width, 2 mm gap on every side and in front of the carcass |
+| Door hinge sides | facing pairs (L R L R ...); an odd last door hinges right |
+| Hinges per door | 2 up to 900 mm door height, 3 up to 1600 mm, 4 above |
+| Inner walls | one behind every joint between two doors |
+| Shelves | as many as keep every space at least 320 mm high, on 4 shelf pins each |
+| Back panel | onset (default) or inset |
+| Thickness | panels 18, back 10, walls 18, doors 22, shelves 30 |
+| Legs | corners with a 30 mm margin, middle legs added so spacing stays within 600 mm |
 
 Every push runs the tests on GitHub Actions and builds sample cabinets (STEP, STL, SVG)
 as a downloadable artifact.

@@ -4,7 +4,7 @@ import cadquery as cq  # noqa: F401  (contract requires the import)
 
 from cabinet_reference import Params, build as _build
 
-PARAMS = {"W": 1200.0, "H": 850.0, "D": 580.0, "leg_h": 100.0}
+PARAMS = {"W": 1200.0, "H": 850.0, "D": 580.0, "leg_h": 100.0, "back_mode": "onset"}
 
 
 def build(params: dict):
