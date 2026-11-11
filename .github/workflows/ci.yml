@@ -1,0 +1,29 @@
+name: build-and-test
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: Test
+        run: pytest -v
+      - name: Build sample cabinets
+        run: |
+          mkdir -p outputs
+          for size in "600 700" "1200 850" "1500 850" "1800 1000" "2400 1700"; do
+            python cabinet_reference.py $size outputs | tee -a outputs/summary.txt
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cabinet-outputs
+          path: outputs/
