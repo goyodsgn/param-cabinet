@@ -1,0 +1,47 @@
+name: agent-test
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Conversation ids (small on purpose to save usage)"
+        default: "c01,c08,c13,c21"
+      model:
+        description: "Model name"
+        default: "claude-sonnet-5-5"
+      max_turns:
+        description: "Max agent steps per customer turn"
+        default: "8"
+
+permissions:
+  contents: write
+
+jobs:
+  agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Talk to the agent (Pro subscription)
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: rm -rf generated_agent && python experiment/run_agent.py --only "${{ inputs.only }}" --model ${{ inputs.model }} --max-turns ${{ inputs.max_turns }}
+      - name: Grade every turn like the model-only baseline
+        run: python experiment/run_chat.py --dir generated_agent --out results/agent_chat --previews
+      - name: Save
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add generated_agent results
+          git diff --cached --quiet || (git commit -m "Agent test results [skip ci]" && git pull --rebase && git push)
+      - run: cat results/agent_usage.md results/agent_chat.md >> "$GITHUB_STEP_SUMMARY"
