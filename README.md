@@ -4,6 +4,10 @@
 
 *AI-generated parametric CAD for a kitchen base cabinet, scored on whether its design rules still hold when the size changes.*
 
+- **최신 결과물 (3D, 브라우저에서 바로 조작):** https://goyodsgn.github.io/param-cabinet/
+- **포트폴리오 글:** [AI 파라메트릭 하부장 연구 - 최신 업데이트](https://jeongyeon.framer.website/project/ai-parametric-cabinet-live) · [연구 과정](https://jeongyeon.framer.website/project/ai-parametric-cabinet) · [English](https://jeongyeon.framer.website/en/project/ai-parametric-cabinet)
+- **만든 사람:** 김정연 (Jeongyeon Kim), computational designer — https://jeongyeon.framer.website
+
 ## 결과 요약
 
 | 실험 | 질문 | 결과 | 상세 |
@@ -11,6 +15,7 @@
 | 1. 치수 해석 | 고객이 다양하게 말해도 치수를 제대로 읽는가 | 10건 모두 통과 | [results/step3.md](results/step3.md) |
 | 2. 우선순위 | 고객 요청과 제작 규칙이 충돌하면 규칙대로 처리하는가 | 12건 모두 통과 | [results/step3_priority.md](results/step3_priority.md) |
 | 3. 크기 변경 | 생성된 모델에 다른 크기를 넣어도 규칙이 유지되는가 | 638번 중 628번(98%) 통과 | [results/step4.md](results/step4.md) |
+| 4. 대화형 요청 | 두 번에 나눠 요청해도(외경·내경, 문 배치, 싱크대, 상판·뒷판 방식) 제대로 반영하는가 | 대화 24개 × 2턴 모두 통과 | [results/chat.md](results/chat.md) |
 
 실험 3에서 실패한 2개 모델은 문이 3짝일 때 마지막 문의 경첩을 반대쪽에 다는 같은 오류를 보였습니다. 고객이 요청한 크기에서는 문이 짝수여서 실험 2에서는 드러나지 않았습니다.
 
