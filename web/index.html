@@ -81,11 +81,12 @@ function render() {
   const key = `w${state.w}_${state.top}_${state.layout}_${state.door}`;
   const m = manifest.models[key];
   const mv = document.getElementById("mv");
-  if (mv.getAttribute("src") !== m.file) mv.setAttribute("src", m.file);
+  const src = m.file + "?v=" + (manifest.rev || "");
+  if (mv.getAttribute("src") !== src) mv.setAttribute("src", src);
   document.getElementById("info").innerHTML = T.info(m) + "<br>" + T.note + "<br>" + T.updated(manifest.updated || "", manifest.rev || "");
 }
 
-fetch("models/manifest.json").then(r => r.json()).then(j => { manifest = j; render(); });
+fetch("models/manifest.json", { cache: "no-store" }).then(r => r.json()).then(j => { manifest = j; render(); });
 </script>
 </body>
 </html>
