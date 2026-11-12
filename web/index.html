@@ -39,8 +39,9 @@
   body.compact .wrap { padding: 0; gap: 0; min-height: 0; }
   body.compact #view { border: 0; border-radius: 0; }
   body.compact #toggle { display: block; }
-  body.compact #panel { display: none; position: absolute; inset: 48px 10px 10px 10px; z-index: 2; overflow: auto;
-    background: rgba(255,255,255,.96); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  body.compact #panel { display: none; position: absolute; left: 10px; right: 10px; bottom: 10px; max-height: calc(100% - 58px);
+    z-index: 2; overflow: auto; background: rgba(255,255,255,.93); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  body.compact .info { font-size: 12px; }
   body.compact.open #panel { display: flex; flex-direction: column; gap: 12px; }
   body.compact input[type=range] { width: 160px; }
 </style>
@@ -307,7 +308,15 @@ function setCompact() {
   document.body.classList.toggle("compact", compact);
   toggle.textContent = document.body.classList.contains("open") ? TOG[1] : TOG[0];
 }
-toggle.addEventListener("click", () => { document.body.classList.toggle("open"); setCompact(); });
+toggle.addEventListener("click", () => {
+  document.body.classList.toggle("open");
+  setCompact();
+  const open = document.body.classList.contains("compact") && document.body.classList.contains("open");
+  const ph = open ? document.getElementById("panel").getBoundingClientRect().height : 0;
+  const r = view.getBoundingClientRect();
+  if (ph) camera.setViewOffset(r.width, r.height, 0, ph / 2, r.width, r.height); else camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+});
 window.addEventListener("resize", setCompact);
 setCompact();
 
