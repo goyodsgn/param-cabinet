@@ -21,8 +21,9 @@ from cabinet_reference import Params, compute_layout, pin_ys, validate  # noqa: 
 
 # Keys a customer may change, and absolute rules that must keep the company value
 OVERRIDABLE = ["W", "H", "D", "leg_h", "back_mode", "top_mode", "t", "back_t", "divider_t", "door_t",
-               "shelf_t", "n_doors", "n_shelves", "shelf_min_gap", "door_layout", "bottom_clear_min"]
-STR_KEYS = ("back_mode", "top_mode")
+               "shelf_t", "n_doors", "n_shelves", "shelf_min_gap", "door_layout", "bottom_clear_min",
+               "single_door_hinge"]
+STR_KEYS = ("back_mode", "top_mode", "single_door_hinge")
 INT_KEYS = ("n_doors", "n_shelves")
 ABSOLUTE = {"door_gap": 2.0, "door_max_w": 600.0, "pin_max_spacing": 500.0, "leg_max_spacing": 600.0}
 

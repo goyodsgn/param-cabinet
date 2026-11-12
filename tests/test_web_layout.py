@@ -12,7 +12,8 @@ CASES = [
     dict(W=1500, H=850, D=600, door_layout=[1, 2], top_mode="onset"),
     dict(W=1500, H=1300, D=600, door_layout=[2, 1], top_mode="none"),
     dict(W=1800, H=2000, D=600, door_layout=[2, 2], back_mode="inset"),
-    dict(W=1790, H=1640, D=600, top_mode="none"), dict(W=1210, H=905, D=600, door_layout=[2, 2]),
+    dict(W=1790, H=1640, D=600, top_mode="none"), dict(W=1800, H=850, D=600, single_door_hinge="left"),
+    dict(W=1200, H=850, D=600, door_layout=[1, 1], single_door_hinge="right"), dict(W=1210, H=905, D=600, door_layout=[2, 2]),
 ]
 
 

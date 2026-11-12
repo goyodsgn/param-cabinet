@@ -67,6 +67,7 @@ class Params:
     door_min_w: float = 250.0
     n_doors: int | None = None        # customer override; None = minimum count from door_max_w
     door_layout: list | None = None   # doors per bay, left to right, each 1 or 2; e.g. [1, 2]
+    single_door_hinge: str | None = None  # all single doors hinged on one side ("left"/"right"); None = facing pairs
 
     # Hinges: (door height upper bound, hinge count), first matching band wins
     hinge_rule: list = field(default_factory=lambda: [
@@ -199,6 +200,8 @@ def door_sides(p: Params, groups: list) -> list:
     left-right, and a single door hinges on the side of the cabinet it is nearer (middle -> left)."""
     n = sum(groups)
     if all(g == 1 for g in groups):
+        if p.single_door_hinge in ("left", "right"):
+            return [p.single_door_hinge] * n
         return hinge_sides(n)
     cell = p.W / n
     out, i = [], 0
@@ -332,6 +335,8 @@ def validate(p: Params, lay: Layout | None = None) -> list:
         errs.append(f"back_mode must be onset or inset, got {p.back_mode}")
     if p.top_mode not in ("onset", "inset", "none"):
         errs.append(f"top_mode must be onset, inset or none, got {p.top_mode}")
+    if p.single_door_hinge not in (None, "left", "right"):
+        errs.append(f"single_door_hinge must be left, right or None, got {p.single_door_hinge}")
     if p.door_layout is not None and (not p.door_layout or any(int(g) not in (1, 2) for g in p.door_layout)):
         errs.append(f"door_layout entries must be 1 or 2, got {p.door_layout}")
         return errs

@@ -7,7 +7,7 @@ export const P0 = {
   cup_d: 35, cup_depth: 12, cup_x: 22.5, cup_end: 100,
   shelf_t: 30, min_gap: 320, shelf_clear: 1,
   leg_h: 100, leg_d: 40, leg_inset: 30, leg_max: 600,
-  top_mode: "inset", back_mode: "onset", door_layout: null,
+  top_mode: "inset", back_mode: "onset", door_layout: null, single_door_hinge: null,
 };
 
 export function hingeCount(h) {
@@ -26,7 +26,10 @@ function hingeSides(n) {
 
 function doorSides(p, groups) {
   const n = groups.reduce((a, b) => a + b, 0);
-  if (groups.every((g) => g === 1)) return hingeSides(n);
+  if (groups.every((g) => g === 1)) {
+    if (p.single_door_hinge === "left" || p.single_door_hinge === "right") return Array(n).fill(p.single_door_hinge);
+    return hingeSides(n);
+  }
   const cell = p.W / n;
   const out = [];
   let i = 0;

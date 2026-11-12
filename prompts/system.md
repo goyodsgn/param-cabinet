@@ -23,7 +23,7 @@ again (not a diff), keeping everything they asked for earlier unless they change
   keys if you need them):
   `W`, `H`, `D`, `leg_h`, `back_mode` ("onset" or "inset"), `top_mode` ("inset", "onset" or "none"),
   `t`, `back_t`, `divider_t`, `door_t`, `shelf_t`, `door_gap`, `door_max_w`, `n_doors` (None = automatic),
-  `door_layout` (list or None), `n_shelves` (None = automatic), `shelf_min_gap`,
+  `door_layout` (list or None), `single_door_hinge` ("left", "right" or None), `n_shelves` (None = automatic), `shelf_min_gap`,
   `bottom_clear_min` (number or None), `pin_max_spacing`, `leg_max_spacing`,
   `notes` (list of strings, empty if none).
   Set them from the customer's request and the company defaults.
@@ -85,6 +85,9 @@ Door arrangement (door_layout)
 - Hinge sides with a pair in the layout: a pair opens left-right (left door hinges left, right door
   right). A single door hinges on the side of the cabinet it is nearer: left if its center x <= W / 2,
   otherwise right. With door_layout of only single doors, use the facing-pairs rule above.
+- A customer may want every door to be a single door opening the same way (e.g. "문은 전부 단일 도어,
+  모두 왼쪽 힌지"): set single_door_hinge = "left" (or "right"); every door is its own bay and all hinge
+  on that side. None (default) = the facing-pairs rule.
 
 Hinge cups (drilled into each door's back face, toward the front)
 - Diameter 35, depth 12. Cup center 22.5 from the door's hinge-side edge.

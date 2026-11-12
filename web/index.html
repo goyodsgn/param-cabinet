@@ -152,7 +152,9 @@ function build() {
   const opts = layoutOptions(n);
   if (!opts.find((o) => o.key === state.layout)) state.layout = "single";
   const groups = opts.find((o) => o.key === state.layout).groups;
-  const L = computeLayout({ W: state.W, H: state.H, D: state.D, top_mode: state.top, door_layout: groups });
+  // "all single doors": every door is its own bay and hinges on the left
+  const L = computeLayout({ W: state.W, H: state.H, D: state.D, top_mode: state.top, door_layout: groups,
+    single_door_hinge: state.layout === "single" ? "left" : null });
   const p = L.p, t = p.t;
   if (group) {
     scene.remove(group);
