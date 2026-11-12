@@ -3,7 +3,7 @@
 Options shown to the customer (all combinations are computed ahead of time, so the page needs no server):
   width 900 / 1200 / 1500 / 1800, top panel (between sides / covering / none for a sink),
   door arrangement (default / with a double door), doors closed / open.
-usage: python web/build_web.py  -> web/models/*.glb, web/models/manifest.json
+usage: python experiment/export_glb.py  -> outputs/glb/*.glb (for AR or other viewers; the web viewer now builds the model in the browser)
 """
 
 import io
@@ -19,7 +19,7 @@ sys.path.insert(0, ROOT)
 
 from cabinet_reference import Params, build, compute_layout  # noqa: E402
 
-OUT = os.path.join(ROOT, "web", "models")
+OUT = os.path.join(ROOT, "outputs", "glb")
 H, D = 850.0, 600.0
 WIDTHS = [900, 1200, 1500, 1800]
 TOPS = ["inset", "onset", "none"]
