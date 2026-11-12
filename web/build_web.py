@@ -135,7 +135,7 @@ def make_glb(p, opened, tex_img):
 
     scene = trimesh.Scene()
     mats = {
-        "white": PBRMaterial(name="white_melamine", baseColorFactor=[236, 234, 228, 255],
+        "white": PBRMaterial(name="ivory_melamine", baseColorFactor=[234, 226, 208, 255],
                              metallicFactor=0.0, roughnessFactor=0.55),
         "leg": PBRMaterial(name="black_metal", baseColorFactor=[30, 30, 32, 255],
                            metallicFactor=0.6, roughnessFactor=0.4),
