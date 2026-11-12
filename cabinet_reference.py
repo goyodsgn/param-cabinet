@@ -22,8 +22,19 @@ Rule priority
 
 Joinery
 - Doors are onset (overlay) on the whole carcass front.
-- Side panels are onset on the top and bottom: sides run full height, top/bottom sit between them.
+- Bottom panel sits between the side panels.
+- Top panel: top_mode "inset" (default, between the sides), "onset" (covers the top of the sides, W wide)
+  or "none" (no top panel at all, e.g. a sink cabinet; the worktop goes on later).
 - Back panel is onset (covers the rear of sides, top and bottom) or inset (fits between them).
+
+Door arrangement
+- door_layout lists the doors in each bay from left to right, e.g. [1, 2] = a single door on the left and
+  a double door (pair) on the right. All door cells are W / n wide; an inner wall stands only between
+  bays. None = every door is its own bay (a wall behind every door joint).
+
+Inner space
+- bottom_clear_min: the lowest space (bottom panel to first shelf) stays at least this high, e.g. for
+  albums or encyclopedias. Other spaces still keep shelf_min_gap.
 """
 
 from __future__ import annotations
@@ -46,6 +57,7 @@ class Params:
     t: float = 18.0                   # side / top / bottom panel thickness
     back_t: float = 10.0              # back panel thickness
     back_mode: str = "onset"          # "onset" or "inset"
+    top_mode: str = "inset"           # "inset" (between sides), "onset" (covers sides) or "none" (sink)
     divider_t: float = 18.0           # inner vertical wall thickness
 
     # Doors
@@ -54,6 +66,7 @@ class Params:
     door_max_w: float = 600.0         # one more door (and one more wall) when exceeded
     door_min_w: float = 250.0
     n_doors: int | None = None        # customer override; None = minimum count from door_max_w
+    door_layout: list | None = None   # doors per bay, left to right, each 1 or 2; e.g. [1, 2]
 
     # Hinges: (door height upper bound, hinge count), first matching band wins
     hinge_rule: list = field(default_factory=lambda: [
@@ -70,6 +83,7 @@ class Params:
     shelf_t: float = 30.0
     shelf_min_gap: float = 320.0      # every clear space between shelves stays at least this high
     n_shelves: int | None = None      # customer override; None = most shelves that keep shelf_min_gap
+    bottom_clear_min: float | None = None  # lowest space at least this high (None = no extra demand)
     shelf_clear: float = 1.0          # side clearance between shelf and vertical panels
     pin_d: float = 5.0                # shelf pin diameter
     pin_hole_depth: float = 8.0       # pin hole depth into the vertical panel
@@ -100,6 +114,18 @@ class Params:
     def inner_back(self) -> float:    # y of the inner face of the back panel
         return self.Dc - self.back_t
 
+    @property
+    def inner_bottom(self) -> float:  # z of the top face of the bottom panel
+        return self.z0 + self.t
+
+    @property
+    def inner_top(self) -> float:     # z of the underside of the top panel (carcass top with no top)
+        return self.z0 + self.Hc - (0 if self.top_mode == "none" else self.t)
+
+    @property
+    def clear_h(self) -> float:       # clear inner height
+        return self.inner_top - self.inner_bottom
+
 
 # ---------------------------------------------------------------
 # 2. Rule calculation (pure Python)
@@ -117,6 +143,7 @@ class Door:
 @dataclass
 class Layout:
     n_doors: int
+    groups: list        # doors per bay, left to right
     door_w: float
     door_h: float
     n_hinges: int
@@ -154,8 +181,54 @@ def min_door_count(p: Params) -> int:
 
 
 def door_count(p: Params) -> int:
-    """Customer may ask for more doors, never fewer than the absolute minimum."""
+    """Customer may ask for more doors, never fewer than the absolute minimum.
+    With an explicit door_layout the count is what the layout says (validate flags a too-wide door)."""
+    if p.door_layout:
+        return sum(int(g) for g in p.door_layout)
     return max(p.n_doors or 0, min_door_count(p))
+
+
+def door_groups(p: Params) -> list:
+    if p.door_layout:
+        return [int(g) for g in p.door_layout]
+    return [1] * door_count(p)
+
+
+def door_sides(p: Params, groups: list) -> list:
+    """All single doors: facing pairs (hinge_sides). With a double door in the layout: each pair opens
+    left-right, and a single door hinges on the side of the cabinet it is nearer (middle -> left)."""
+    n = sum(groups)
+    if all(g == 1 for g in groups):
+        return hinge_sides(n)
+    cell = p.W / n
+    out, i = [], 0
+    for g in groups:
+        if g == 2:
+            out += ["left", "right"]
+        else:
+            out.append("left" if (i + 0.5) * cell <= p.W / 2 + 1e-9 else "right")
+        i += g
+    return out
+
+
+def shelf_rule_count(p: Params) -> int:
+    """Most shelves keeping every space >= shelf_min_gap and the lowest >= bottom_clear_min."""
+    low = max(p.bottom_clear_min or 0, p.shelf_min_gap)
+    return max(0, math.floor((p.clear_h - low) / (p.shelf_min_gap + p.shelf_t)))
+
+
+def shelf_positions(p: Params, k: int) -> list:
+    """Bottom z of each shelf: spread evenly; if that leaves the lowest space under bottom_clear_min,
+    keep the lowest space at bottom_clear_min and spread the rest evenly above it."""
+    if k <= 0:
+        return []
+    base, ch = p.inner_bottom, p.clear_h
+    space = (ch - k * p.shelf_t) / (k + 1)
+    if p.bottom_clear_min is None or space >= p.bottom_clear_min:
+        return [base + space * (i + 1) + p.shelf_t * i for i in range(k)]
+    b = p.bottom_clear_min
+    rest = (ch - b - k * p.shelf_t) / k
+    return [base + b + i * (p.shelf_t + rest) for i in range(k)]
 
 
 def pin_ys(p: Params) -> list:
@@ -215,32 +288,35 @@ def leg_axis(p: Params, length: float):
 
 def compute_layout(p: Params) -> Layout:
     g = p.door_gap
-    n = door_count(p)
+    groups = door_groups(p)
+    n = sum(groups)
     cell = p.W / n
     door_w = cell - 2 * g
     door_h = p.Hc - 2 * g
     nh = hinge_count(p, door_h)
     doors = []
-    for i, side in enumerate(hinge_sides(n)):
+    for i, side in enumerate(door_sides(p, groups)):
         x = i * cell + g
         z = p.z0 + g
         doors.append(Door(x=x, z=z, w=door_w, h=door_h, hinge_side=side,
                           hinge_z=hinge_positions(p, z, door_h, nh)))
 
-    # One inner wall behind every joint between two doors
-    dividers = [(j * cell - p.divider_t / 2, j * cell + p.divider_t / 2) for j in range(1, n)]
+    # One inner wall between neighbouring bays (behind every door joint unless two doors form a pair)
+    joints, acc = [], 0
+    for gcount in groups[:-1]:
+        acc += gcount
+        joints.append(acc)
+    dividers = [(j * cell - p.divider_t / 2, j * cell + p.divider_t / 2) for j in joints]
     edges = [p.t] + [v for d in dividers for v in d] + [p.W - p.t]
     bays = [(edges[2 * i], edges[2 * i + 1]) for i in range(len(edges) // 2)]
 
-    # Shelves, evenly spaced in the clear height
-    clear_h = p.Hc - 2 * p.t
-    ns = p.n_shelves if p.n_shelves is not None else shelf_count(clear_h, p.shelf_t, p.shelf_min_gap)
-    space = (clear_h - ns * p.shelf_t) / (ns + 1)
-    shelf_z = [p.z0 + p.t + space * (k + 1) + p.shelf_t * k for k in range(ns)]
+    # Shelves in the clear height
+    ns = p.n_shelves if p.n_shelves is not None else shelf_rule_count(p)
+    shelf_z = shelf_positions(p, ns)
 
     xs, ys = leg_axis(p, p.W), leg_axis(p, p.Dc)
     legs = [(x, y) for x in xs for y in ys]
-    return Layout(n_doors=n, door_w=door_w, door_h=door_h, n_hinges=nh, doors=doors,
+    return Layout(n_doors=n, groups=groups, door_w=door_w, door_h=door_h, n_hinges=nh, doors=doors,
                   dividers=dividers, bays=bays, n_shelves=ns, shelf_z=shelf_z,
                   legs=legs, legs_x=len(xs), legs_y=len(ys))
 
@@ -254,6 +330,11 @@ def validate(p: Params, lay: Layout | None = None) -> list:
         return ["dimension <= 0"]
     if p.back_mode not in ("onset", "inset"):
         errs.append(f"back_mode must be onset or inset, got {p.back_mode}")
+    if p.top_mode not in ("onset", "inset", "none"):
+        errs.append(f"top_mode must be onset, inset or none, got {p.top_mode}")
+    if p.door_layout is not None and (not p.door_layout or any(int(g) not in (1, 2) for g in p.door_layout)):
+        errs.append(f"door_layout entries must be 1 or 2, got {p.door_layout}")
+        return errs
     if p.door_gap < 0:
         errs.append("door gap < 0")
     if p.Dc <= p.back_t + 2 * p.pin_offset:
@@ -278,7 +359,7 @@ def validate(p: Params, lay: Layout | None = None) -> list:
             errs.append(f"door {i}: gap on the left is not {p.door_gap}")
     if abs(lay.door_h - (p.Hc - 2 * p.door_gap)) > 1e-6:
         errs.append("door height does not leave the gap top and bottom")
-    if [d.hinge_side for d in lay.doors] != hinge_sides(lay.n_doors):
+    if [d.hinge_side for d in lay.doors] != door_sides(p, lay.groups):
         errs.append("hinge sides are not facing pairs")
 
     # Hinges
@@ -296,20 +377,22 @@ def validate(p: Params, lay: Layout | None = None) -> list:
         errs.append("hinge cup goes through the door")
 
     # Inner walls: one per extra door, every bay wide enough
-    if len(lay.dividers) != lay.n_doors - 1:
-        errs.append(f"{len(lay.dividers)} inner walls for {lay.n_doors} doors")
+    if len(lay.dividers) != len(lay.groups) - 1:
+        errs.append(f"{len(lay.dividers)} inner walls for {len(lay.groups)} bays")
     if any(x1 - x0 <= 2 * (p.shelf_clear + p.pin_out) for x0, x1 in lay.bays):
         errs.append("a bay is too narrow")
 
     # Shelves
-    clear_h = p.Hc - 2 * p.t
+    clear_h = p.clear_h
+    tops = [p.inner_bottom] + [z + p.shelf_t for z in lay.shelf_z]
+    bots = lay.shelf_z + [p.inner_top]
     if p.n_shelves is None:
-        if lay.n_shelves != shelf_count(clear_h, p.shelf_t, p.shelf_min_gap):
+        if lay.n_shelves != shelf_rule_count(p):
             errs.append("shelf count != rule")
-        tops = [p.z0 + p.t] + [z + p.shelf_t for z in lay.shelf_z]
-        bots = lay.shelf_z + [p.z0 + p.Hc - p.t]
         if any(b - a < p.shelf_min_gap - 1e-6 for a, b in zip(tops, bots)) and lay.n_shelves > 0:
             errs.append("space between shelves < shelf_min_gap")
+    if p.bottom_clear_min is not None and bots[0] - tops[0] < p.bottom_clear_min - 1e-6:
+        errs.append(f"lowest space {bots[0] - tops[0]:.0f} < bottom_clear_min {p.bottom_clear_min:.0f}")
     elif lay.n_shelves * p.shelf_t >= clear_h:
         errs.append("shelves do not fit")
     ys = pin_ys(p)
@@ -359,19 +442,23 @@ def build(p: Params, lay: Layout | None = None):
         return solid
 
     # Carcass
-    left = pin_holes(box(t, body_d, Hc, 0, 0, z0), t, +1)
-    right = pin_holes(box(t, body_d, Hc, p.W - t, 0, z0), p.W - t, -1)
+    side_h = Hc - t if p.top_mode == "onset" else Hc
+    left = pin_holes(box(t, body_d, side_h, 0, 0, z0), t, +1)
+    right = pin_holes(box(t, body_d, side_h, p.W - t, 0, z0), p.W - t, -1)
     parts += [("side_left", left), ("side_right", right)]
     parts.append(("bottom", box(p.W - 2 * t, body_d, t, t, 0, z0)))
-    parts.append(("top", box(p.W - 2 * t, body_d, t, t, 0, z0 + Hc - t)))
+    if p.top_mode == "inset":
+        parts.append(("top", box(p.W - 2 * t, body_d, t, t, 0, z0 + Hc - t)))
+    elif p.top_mode == "onset":
+        parts.append(("top", box(p.W, body_d, t, 0, 0, z0 + Hc - t)))
     if p.back_mode == "onset":
         parts.append(("back", box(p.W, p.back_t, Hc, 0, Dc - p.back_t, z0)))
     else:
-        parts.append(("back", box(p.W - 2 * t, p.back_t, Hc - 2 * t, t, Dc - p.back_t, z0 + t)))
+        parts.append(("back", box(p.W - 2 * t, p.back_t, p.clear_h, t, Dc - p.back_t, p.inner_bottom)))
 
     # Inner walls
     for i, (x0, x1) in enumerate(lay.dividers):
-        wall = box(x1 - x0, p.inner_back, Hc - 2 * t, x0, 0, z0 + t)
+        wall = box(x1 - x0, p.inner_back, p.clear_h, x0, 0, p.inner_bottom)
         wall = pin_holes(wall, x0, -1)
         wall = pin_holes(wall, x1, +1)
         parts.append((f"divider_{i + 1}", wall))
@@ -434,10 +521,14 @@ def export(parts, stem: str, p: Params | None = None, lay: Layout | None = None)
         cups = [c for door_cups in lay.hinge_centers(p) for c in door_cups]
         title = (f"W {p.W:.0f} x H {p.H:.0f} x D {p.D:.0f} (overall)  ·  {lay.n_doors} door(s), "
                  f"{lay.n_hinges} hinges each  ·  {len(lay.dividers)} wall(s)  ·  "
-                 f"{lay.n_shelves} shelf/bay  ·  legs {lay.legs_x}x{lay.legs_y}  ·  back {p.back_mode}")
-        inside = ([(0, p.z0, p.t, p.Hc), (p.W - p.t, p.z0, p.t, p.Hc),
-                   (p.t, p.z0, p.W - 2 * p.t, p.t), (p.t, p.z0 + p.Hc - p.t, p.W - 2 * p.t, p.t)]
-                  + [(x0, p.z0 + p.t, x1 - x0, p.Hc - 2 * p.t) for x0, x1 in lay.dividers]
+                 f"{lay.n_shelves} shelf/bay  ·  legs {lay.legs_x}x{lay.legs_y}  ·  back {p.back_mode}  ·  "
+                 f"top {p.top_mode}  ·  bays {lay.groups}")
+        side_h = p.Hc - p.t if p.top_mode == "onset" else p.Hc
+        top = {"inset": [(p.t, p.z0 + p.Hc - p.t, p.W - 2 * p.t, p.t)],
+               "onset": [(0, p.z0 + p.Hc - p.t, p.W, p.t)], "none": []}[p.top_mode]
+        inside = ([(0, p.z0, p.t, side_h), (p.W - p.t, p.z0, p.t, side_h),
+                   (p.t, p.z0, p.W - 2 * p.t, p.t)] + top
+                  + [(x0, p.inner_bottom, x1 - x0, p.clear_h) for x0, x1 in lay.dividers]
                   + [(x0 + p.shelf_clear, z, x1 - x0 - 2 * p.shelf_clear, p.shelf_t)
                      for x0, x1 in lay.bays for z in lay.shelf_z])
         render([(n, mesh_of(s)) for n, s in parts if not n.startswith("pin_")],
@@ -451,11 +542,14 @@ def side_view(p: Params, lay: Layout) -> dict:
     """Rectangles (y, z, dy, dz) and pin dots for a side elevation seen from the right,
     looking at the inner face of the left side panel. Front (doors) on the left."""
     body_d = p.Dc - p.back_t if p.back_mode == "onset" else p.Dc
-    panels = [(0, p.z0, body_d, p.Hc)]                                         # left side panel
+    side_h = p.Hc - p.t if p.top_mode == "onset" else p.Hc
+    panels = [(0, p.z0, body_d, side_h)]                                       # left side panel
+    if p.top_mode == "onset":
+        panels.append((0, p.z0 + p.Hc - p.t, body_d, p.t))
     if p.back_mode == "onset":
         panels.append((p.Dc - p.back_t, p.z0, p.back_t, p.Hc))
     else:
-        panels.append((p.Dc - p.back_t, p.z0 + p.t, p.back_t, p.Hc - 2 * p.t))
+        panels.append((p.Dc - p.back_t, p.inner_bottom, p.back_t, p.clear_h))
     shelves = [(0, z, p.inner_back, p.shelf_t) for z in lay.shelf_z]
     door = (-(p.door_gap + p.door_t), lay.doors[0].z, p.door_t, lay.door_h)
     pins = [(y, z) for (xf, d, y, z) in lay.pins(p) if abs(xf - p.t) < 1e-6]
@@ -468,7 +562,8 @@ def side_view(p: Params, lay: Layout) -> dict:
 # 5. Run
 # ---------------------------------------------------------------
 def describe(p: Params, lay: Layout) -> str:
-    lines = [f"W={p.W:.0f} H={p.H:.0f} D={p.D:.0f} leg_h={p.leg_h:.0f} back={p.back_mode}  ->  "
+    lines = [f"W={p.W:.0f} H={p.H:.0f} D={p.D:.0f} leg_h={p.leg_h:.0f} back={p.back_mode} top={p.top_mode} "
+             f"bays={lay.groups}  ->  "
              f"doors {lay.n_doors} x {lay.door_w:.1f} x {lay.door_h:.1f} mm, hinges {lay.n_hinges} per door, "
              f"walls {len(lay.dividers)}, shelves {lay.n_shelves} per bay, pins {len(lay.pins(p))} "
              f"({len(pin_ys(p))} per side), "
@@ -482,7 +577,8 @@ def describe(p: Params, lay: Layout) -> str:
 if __name__ == "__main__":
     import sys
 
-    # usage: python cabinet_reference.py W H D leg_h [back_mode] [out_dir]
+    # usage: python cabinet_reference.py W H D leg_h [back_mode] [out_dir] [top_mode] [door_layout e.g. 1,2]
+    #        [bottom_clear_min]
     args = sys.argv[1:]
     p = Params()
     for name, v in zip(["W", "H", "D", "leg_h"], args[:4]):
@@ -490,6 +586,12 @@ if __name__ == "__main__":
     if len(args) >= 5:
         p.back_mode = args[4]
     out = args[5] if len(args) >= 6 else "."
+    if len(args) >= 7:
+        p.top_mode = args[6]
+    if len(args) >= 8 and args[7] != "-":
+        p.door_layout = [int(g) for g in args[7].split(",")]
+    if len(args) >= 9:
+        p.bottom_clear_min = float(args[8])
     lay = compute_layout(p)
     print(describe(p, lay))
     errs = validate(p, lay)
@@ -500,4 +602,6 @@ if __name__ == "__main__":
     if any(abs(a - b) > 1e-3 for a, b in zip(size, (p.W, p.D, p.H))):
         gerrs.append(f"bounding box {size} != (W, D, H)")
     print("geometry:", "OK" if not gerrs else gerrs)
-    export(parts, f"{out}/cabinet_{int(p.W)}x{int(p.H)}x{int(p.D)}_{p.back_mode}", p, lay)
+    extra = (f"_top-{p.top_mode}" if p.top_mode != "inset" else "") + \
+        (f"_bays-{'-'.join(map(str, lay.groups))}" if p.door_layout else "")
+    export(parts, f"{out}/cabinet_{int(p.W)}x{int(p.H)}x{int(p.D)}_{p.back_mode}{extra}", p, lay)

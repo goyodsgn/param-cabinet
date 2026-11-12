@@ -1,10 +1,12 @@
 """Evaluate one generated model file against the company rules.
 
-usage: python experiment/evaluate_one.py MODEL.py [OVERRIDES_JSON]
+usage: python experiment/evaluate_one.py MODEL.py [OVERRIDES_JSON] [REFERENCE_JSON]
 
 Loads PARAMS and build() from the file, applies optional parameter overrides, builds the parts and
-checks the geometry against the reference rules (cabinet_reference.compute_layout). Prints one JSON
-object. Exit code is 0 even when checks fail; a crash is reported as runs=false.
+checks the geometry against the reference rules (cabinet_reference.compute_layout). By default the
+reference uses the model's own PARAMS; REFERENCE_JSON instead gives the spec the customer asked for
+(conversation test), so the geometry is checked against what was asked. Prints one JSON object.
+Exit code is 0 even when checks fail; a crash is reported as runs=false.
 """
 
 import importlib.util
@@ -18,8 +20,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from cabinet_reference import Params, compute_layout, pin_ys, validate  # noqa: E402
 
 # Keys a customer may change, and absolute rules that must keep the company value
-OVERRIDABLE = ["W", "H", "D", "leg_h", "back_mode", "t", "back_t", "divider_t", "door_t", "shelf_t",
-               "n_doors", "n_shelves", "shelf_min_gap"]
+OVERRIDABLE = ["W", "H", "D", "leg_h", "back_mode", "top_mode", "t", "back_t", "divider_t", "door_t",
+               "shelf_t", "n_doors", "n_shelves", "shelf_min_gap", "door_layout", "bottom_clear_min"]
+STR_KEYS = ("back_mode", "top_mode")
+INT_KEYS = ("n_doors", "n_shelves")
 ABSOLUTE = {"door_gap": 2.0, "door_max_w": 600.0, "pin_max_spacing": 500.0, "leg_max_spacing": 600.0}
 
 TOL = 1.0
@@ -55,7 +59,24 @@ def cup_faces(shape):
     return out
 
 
-def evaluate(path, overrides=None, mod=None):
+def to_params(d):
+    kw = {}
+    for k in OVERRIDABLE:
+        v = d.get(k)
+        if v is None:
+            continue
+        if k in STR_KEYS:
+            kw[k] = str(v)
+        elif k in INT_KEYS:
+            kw[k] = int(v)
+        elif k == "door_layout":
+            kw[k] = [int(g) for g in v] or None
+        else:
+            kw[k] = float(v)
+    return Params(**kw)
+
+
+def evaluate(path, overrides=None, mod=None, reference=None):
     res = {"runs": False, "error": ""}
     try:
         mod = mod or load(path)
@@ -80,21 +101,24 @@ def evaluate(path, overrides=None, mod=None):
         res["pass"] = False
         return res
     checks["params"] = True
-    kw = {}
-    for k in OVERRIDABLE:
-        v = params.get(k)
-        if v is None:
-            continue
-        kw[k] = str(v) if k == "back_mode" else (int(v) if k in ("n_doors", "n_shelves") else float(v))
-    p = Params(**kw)
-    lay = compute_layout(p)
+    try:
+        p = to_params(reference if reference is not None else params)
+        lay = compute_layout(p)
+    except Exception as e:  # noqa: BLE001  (e.g. door_layout written in a form we cannot read)
+        res["error"] = f"params: {type(e).__name__}: {e}"[:300]
+        checks["params"] = False
+        res["checks"] = checks
+        res["pass"] = False
+        return res
     # Absolute rules: the model kept the company values and its layout breaks none of them
     abs_vals_ok = all(params.get(k) is None or abs(float(params[k]) - v) < 1e-6 for k, v in ABSOLUTE.items())
+    abs_vals_ok = abs_vals_ok and not [e for e in validate(to_params(params), None) if e.startswith("ABSOLUTE")]
     abs_errs = [e for e in validate(p, lay) if e.startswith("ABSOLUTE")]
     checks["absolute_rules"] = abs_vals_ok and not abs_errs
     res["absolute_errors"] = abs_errs
-    res["layout"] = {"doors": lay.n_doors, "shelves": lay.n_shelves}
+    res["layout"] = {"doors": lay.n_doors, "shelves": lay.n_shelves, "bays": lay.groups}
     names = [n for n, _ in parts]
+    by_name = {n: s for n, s in parts}
 
     # Every part is a valid solid with volume
     try:
@@ -102,8 +126,40 @@ def evaluate(path, overrides=None, mod=None):
     except Exception:  # noqa: BLE001
         checks["solids"] = False
 
-    # Carcass parts present
-    checks["carcass_parts"] = all(n in names for n in ("side_left", "side_right", "top", "bottom", "back"))
+    # Carcass parts present (no top panel when top_mode is "none")
+    need = ["side_left", "side_right", "bottom", "back"] + ([] if p.top_mode == "none" else ["top"])
+    checks["carcass_parts"] = all(n in names for n in need)
+
+    # Top panel: inset between the sides, onset over the sides, or none at all
+    def bb_of(n):
+        return by_name[n].BoundingBox() if n in by_name else None
+
+    try:
+        top, sl, back = bb_of("top"), bb_of("side_left"), bb_of("back")
+        if p.top_mode == "none":
+            top_ok = top is None and sl is not None and abs(sl.zmax - p.H) < TOL
+        elif top is None or sl is None:
+            top_ok = False
+        elif p.top_mode == "onset":
+            top_ok = (abs(top.xmin) < TOL and abs(top.xlen - p.W) < TOL and abs(top.zmax - p.H) < TOL
+                      and abs(sl.zmax - (p.H - p.t)) < TOL)
+        else:
+            top_ok = (abs(top.xmin - p.t) < TOL and abs(top.xlen - (p.W - 2 * p.t)) < TOL
+                      and abs(top.zmax - p.H) < TOL and abs(sl.zmax - p.H) < TOL)
+        checks["top_panel"] = bool(top_ok)
+        # Back panel: onset covers the full carcass width and height, inset sits between the panels
+        if back is None:
+            checks["back_panel"] = False
+        elif p.back_mode == "onset":
+            checks["back_panel"] = abs(back.xlen - p.W) < TOL and abs(back.zlen - p.Hc) < TOL
+        else:
+            checks["back_panel"] = (abs(back.xmin - p.t) < TOL and abs(back.xlen - (p.W - 2 * p.t)) < TOL
+                                    and abs(back.zlen - p.clear_h) < TOL)
+        res["got"] = {"top": [round(v, 1) for v in (top.xmin, top.xmax, top.zmin, top.zmax)] if top else None,
+                      "back": [round(v, 1) for v in (back.xmin, back.xmax, back.zmin, back.zmax)] if back else None}
+    except Exception:  # noqa: BLE001
+        checks["top_panel"] = checks["back_panel"] = False
+        res["got"] = {}
 
     doors = sorted([(n, s) for n, s in parts if n.startswith("door_")],
                    key=lambda x: x[1].BoundingBox().xmin)
@@ -114,12 +170,29 @@ def evaluate(path, overrides=None, mod=None):
     bays = len(lay.bays)
     checks["door_count"] = len(doors) == lay.n_doors
     checks["divider_count"] = n_div == len(lay.dividers)
+    # Inner walls stand where the bays meet (door arrangement)
+    div_x = sorted((s.BoundingBox().xmin + s.BoundingBox().xmax) / 2 for n, s in parts if n.startswith("divider_"))
+    checks["divider_position"] = (len(div_x) == len(lay.dividers)
+                                  and all(abs(a - (x0 + x1) / 2) < TOL for a, (x0, x1) in zip(div_x, lay.dividers)))
+    # Shelf spaces in the first bay: lowest space >= bottom_clear_min; every space >= shelf_min_gap (automatic)
+    x0, x1 = lay.bays[0]
+    zs = sorted(s.BoundingBox().zmin for n, s in parts if n.startswith("shelf_")
+                and x0 - TOL <= (s.BoundingBox().xmin + s.BoundingBox().xmax) / 2 <= x1 + TOL)
+    sp_tops = [p.inner_bottom] + [z + p.shelf_t for z in zs]
+    sp_bots = zs + [p.inner_top]
+    spaces = [b - a for a, b in zip(sp_tops, sp_bots)]
+    ok = len(zs) == lay.n_shelves
+    if p.bottom_clear_min is not None and zs:
+        ok = ok and spaces[0] >= p.bottom_clear_min - TOL
+    if p.n_shelves is None and zs:
+        ok = ok and min(spaces) >= p.shelf_min_gap - TOL
+    checks["shelf_spaces"] = ok
     checks["shelf_count"] = n_shelf == lay.n_shelves * bays
     pins_expected = 2 * len(pin_ys(p)) * lay.n_shelves * bays
     checks["pin_count"] = n_pin == pins_expected
     checks["leg_count"] = len(legs) == len(lay.legs)
-    res["got"] = {"doors": len(doors), "dividers": n_div, "shelves": n_shelf, "pins": n_pin,
-                  "legs": len(legs)}
+    res["got"].update({"doors": len(doors), "dividers": n_div, "shelves": n_shelf, "pins": n_pin,
+                       "legs": len(legs), "spaces_bay1": [round(v) for v in spaces]})
     res["expected"] = {"doors": lay.n_doors, "hinges": lay.n_hinges, "dividers": len(lay.dividers),
                        "shelves": lay.n_shelves * bays, "pins": pins_expected,
                        "legs": len(lay.legs), "sides": [d.hinge_side for d in lay.doors]}
@@ -171,5 +244,6 @@ def evaluate(path, overrides=None, mod=None):
 
 
 if __name__ == "__main__":
-    overrides = json.loads(sys.argv[2]) if len(sys.argv) > 2 else None
-    print(json.dumps(evaluate(sys.argv[1], overrides), ensure_ascii=False))
+    overrides = json.loads(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2] not in ("", "null") else None
+    reference = json.loads(sys.argv[3]) if len(sys.argv) > 3 else None
+    print(json.dumps(evaluate(sys.argv[1], overrides, reference=reference), ensure_ascii=False))

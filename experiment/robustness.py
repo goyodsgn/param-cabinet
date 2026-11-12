@@ -55,13 +55,12 @@ def run_model(path, sample_list):
         params = dict(base)
         params.update(ov)
         # Is this size valid for the reference with the model's own settings?
-        kw = {}
-        for k in ev.OVERRIDABLE:
-            v = params.get(k)
-            if v is not None:
-                kw[k] = str(v) if k == "back_mode" else (int(v) if k in ("n_doors", "n_shelves") else float(v))
-        p = Params(**kw)
-        if validate(p, compute_layout(p)):
+        try:
+            p = ev.to_params(params)
+            bad = validate(p, compute_layout(p))
+        except Exception:  # noqa: BLE001
+            bad = True
+        if bad:
             rows.append({"model": path, "i": i, "status": "skipped", **ov})
             continue
         res = ev.evaluate(path, ov, mod=mod)

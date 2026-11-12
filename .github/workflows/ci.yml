@@ -26,12 +26,22 @@ jobs:
           python -c "import json,sys; r=json.load(open('eval.json')); print(r.get('checks')); sys.exit(0 if r.get('pass') else 1)"
           python experiment/evaluate_one.py examples/reference_generated.py '{"W": 2400, "H": 1700, "D": 900, "leg_h": 120, "back_mode": "inset", "n_doors": 6, "n_shelves": 1}' | tee eval2.json
           python -c "import json,sys; r=json.load(open('eval2.json')); print(r.get('checks')); sys.exit(0 if r.get('pass') else 1)"
+          for ov in '{"W": 1500, "D": 600, "door_layout": [1, 2], "top_mode": "onset"}' \
+                    '{"W": 900, "D": 600, "top_mode": "none", "back_mode": "inset", "n_shelves": 0}' \
+                    '{"W": 1200, "H": 1500, "D": 450, "bottom_clear_min": 330, "n_shelves": 3}' \
+                    '{"W": 2400, "H": 900, "D": 600, "door_layout": [2, 2], "bottom_clear_min": 400}'; do
+            python experiment/evaluate_one.py examples/reference_generated.py "$ov" "$ov" | tee eval3.json
+            python -c "import json,sys; r=json.load(open('eval3.json')); print(r.get('checks')); sys.exit(0 if r.get('pass') else 1)"
+          done
       - name: Build sample cabinets
         run: |
           mkdir -p outputs
           for size in "600 700 560 100 onset" "1200 850 580 100 onset" "1500 850 600 150 inset" "1800 1000 650 100 onset" "2400 1700 900 120 onset"; do
             python cabinet_reference.py $size outputs | tee -a outputs/summary.txt
           done
+          python cabinet_reference.py 1500 850 600 100 onset outputs onset 1,2 | tee -a outputs/summary.txt
+          python cabinet_reference.py 900 850 600 100 inset outputs none | tee -a outputs/summary.txt
+          python cabinet_reference.py 1200 1500 450 100 onset outputs inset - 330 | tee -a outputs/summary.txt
       - uses: actions/upload-artifact@v4
         with:
           name: cabinet-outputs

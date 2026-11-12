@@ -101,3 +101,65 @@ def test_customer_can_add_doors_and_set_shelves():
 def test_customer_cannot_make_doors_wider_than_600():
     lay = compute_layout(Params(W=1800, n_doors=2))
     assert lay.n_doors == 3
+
+
+# ---- top panel, door arrangement, inner space -------------------------------------------------
+def test_one_single_and_one_pair():
+    """'세칸짜리에 가장 왼쪽이 한쪽문이고 양문형이 오른쪽' -> door_layout [1, 2]."""
+    p = Params(W=1500, door_layout=[1, 2])
+    lay = compute_layout(p)
+    assert lay.n_doors == 3 and lay.groups == [1, 2]
+    assert len(lay.dividers) == 1
+    assert sum(lay.dividers[0]) / 2 == pytest.approx(500)
+    assert [d.hinge_side for d in lay.doors] == ["left", "left", "right"]
+    assert validate(p, lay) == []
+
+
+def test_pair_on_the_left():
+    lay = compute_layout(Params(W=1500, door_layout=[2, 1]))
+    assert sum(lay.dividers[0]) / 2 == pytest.approx(1000)
+    assert [d.hinge_side for d in lay.doors] == ["left", "right", "right"]
+
+
+def test_pair_wider_than_600_cell_is_flagged():
+    errs = validate(Params(W=1500, door_layout=[2]))
+    assert any(e.startswith("ABSOLUTE") for e in errs)
+
+
+def test_layout_of_all_singles_matches_default():
+    a = compute_layout(Params(W=1800))
+    b = compute_layout(Params(W=1800, door_layout=[1, 1, 1]))
+    assert [d.hinge_side for d in a.doors] == [d.hinge_side for d in b.doors]
+    assert a.dividers == b.dividers
+
+
+def test_sink_has_no_top_and_taller_clear_height():
+    p = Params(H=850, top_mode="none")
+    assert p.clear_h == pytest.approx(750 - 18)
+    assert validate(p) == []
+
+
+@pytest.mark.parametrize("H,B,k", [(850, None, 1), (850, 350, 1), (850, 400, 0), (1200, 350, 2)])
+def test_bottom_space_for_albums(H, B, k):
+    p = Params(H=H, bottom_clear_min=B)
+    lay = compute_layout(p)
+    assert lay.n_shelves == k
+    assert validate(p, lay) == []
+    if k and B:
+        assert lay.shelf_z[0] - p.inner_bottom >= B - 1e-6
+
+
+@pytest.mark.parametrize("top_mode", ["inset", "onset", "none"])
+@pytest.mark.parametrize("back_mode", ["onset", "inset"])
+def test_geometry_top_modes(top_mode, back_mode):
+    pytest.importorskip("cadquery")
+    from cabinet_reference import build, check_solids, bbox_size
+
+    p = Params(W=1500, H=850, D=600, top_mode=top_mode, back_mode=back_mode, door_layout=[1, 2],
+               bottom_clear_min=350)
+    parts = build(p)
+    names = [n for n, _ in parts]
+    assert ("top" in names) == (top_mode != "none")
+    assert sum(n.startswith("divider_") for n in names) == 1
+    assert check_solids(parts) == []
+    assert bbox_size(parts) == pytest.approx((1500, 600, 850), abs=1e-3)

@@ -13,8 +13,9 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CHECKS = ["params", "absolute_rules", "solids", "carcass_parts", "overall_size", "door_count", "door_gap",
-          "hinge_count", "hinge_sides", "divider_count", "shelf_count", "pin_count", "leg_count"]
+CHECKS = ["params", "absolute_rules", "solids", "carcass_parts", "top_panel", "back_panel", "overall_size",
+          "door_count", "door_gap", "hinge_count", "hinge_sides", "divider_count", "divider_position",
+          "shelf_count", "shelf_spaces", "pin_count", "leg_count"]
 
 
 def run_one(path, overrides=None, timeout=180):
