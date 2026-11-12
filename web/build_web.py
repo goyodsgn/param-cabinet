@@ -99,6 +99,22 @@ def to_gltf_axes(v):
     return np.column_stack([v[:, 0], v[:, 2], -v[:, 1]]) / 1000.0
 
 
+def outline_segments(v, f, angle_deg=25.0):
+    """Visible outline of one part: edges where the surface bends sharply, plus open borders."""
+    import trimesh
+
+    m = trimesh.Trimesh(v, f, process=True)
+    sharp = m.face_adjacency_edges[m.face_adjacency_angles > math.radians(angle_deg)]
+    segs = [m.vertices[sharp]]
+    # borders (edges used by only one face), e.g. rims of hinge cups
+    e = np.sort(m.edges, axis=1)
+    uniq, counts = np.unique(e, axis=0, return_counts=True)
+    border = uniq[counts == 1]
+    if len(border):
+        segs.append(m.vertices[border])
+    return np.vstack(segs) if segs else np.zeros((0, 2, 3))
+
+
 def make_glb(p, opened, tex_img):
     import trimesh
     from trimesh.visual.material import PBRMaterial
@@ -107,6 +123,7 @@ def make_glb(p, opened, tex_img):
     lay = compute_layout(p)
     doors = {f"door_{i + 1}": d for i, d in enumerate(lay.doors)}
     groups = {"oak": [], "white": [], "leg": []}
+    lines = []
     for name, solid in build(p, lay):
         if name.startswith("pin_"):
             continue
@@ -114,6 +131,7 @@ def make_glb(p, opened, tex_img):
         if name in doors:
             v = swing(v, doors[name], 95 if opened else 0, p.door_gap)
         groups[material_of(name)].append((v, f))
+        lines.append(outline_segments(v, f))
 
     scene = trimesh.Scene()
     mats = {
@@ -141,6 +159,12 @@ def make_glb(p, opened, tex_img):
             mesh = trimesh.Trimesh(to_gltf_axes(v), f, process=False)
             mesh.visual = TextureVisuals(material=mats[key])
         scene.add_geometry(mesh, node_name=key, geom_name=key)
+    segs = np.vstack(lines)
+    if len(segs):
+        pts = to_gltf_axes(segs.reshape(-1, 3)).reshape(-1, 2, 3)
+        path = trimesh.load_path(pts)
+        path.colors = np.tile([[38, 38, 38, 255]], (len(path.entities), 1))
+        scene.add_geometry(path, node_name="outline", geom_name="outline")
     return scene.export(file_type="glb"), lay
 
 

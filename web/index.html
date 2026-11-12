@@ -11,8 +11,8 @@
   html, body { margin: 0; background: var(--bg); color: var(--ink);
     font-family: "Pretendard", "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif; }
   .wrap { display: flex; flex-direction: column; gap: 14px; padding: 16px; }
-  model-viewer { width: 100%; height: min(62vh, 560px); background: #f6f5f2; border: 1px solid var(--line);
-    border-radius: 8px; --poster-color: #f6f5f2; }
+  model-viewer { width: 100%; height: min(62vh, 560px); background: radial-gradient(circle at 50% 40%, #d9d7d2, #bdbab3);
+    border: 1px solid var(--line); border-radius: 8px; --poster-color: #cfccc6; }
   .controls { display: flex; flex-wrap: wrap; gap: 12px 22px; }
   .group { display: flex; flex-direction: column; gap: 6px; }
   .label { font-size: 13px; font-weight: 600; }
@@ -27,7 +27,7 @@
 </head>
 <body>
 <div class="wrap">
-  <model-viewer id="mv" camera-controls touch-action="pan-y" shadow-intensity="0.7" shadow-softness="0.8"
+  <model-viewer id="mv" camera-controls touch-action="pan-y" shadow-intensity="1" shadow-softness="0.8"
     exposure="1.05" environment-image="neutral" camera-orbit="-28deg 76deg auto" field-of-view="28deg"
     interaction-prompt="none" alt="parametric base cabinet"></model-viewer>
   <div class="controls" id="controls"></div>
