@@ -143,7 +143,16 @@ def make_glb(p, opened, tex_img):
 def main():
     os.makedirs(OUT, exist_ok=True)
     tex = oak_texture()
-    manifest = {"H": H, "D": D, "widths": WIDTHS, "tops": TOPS, "layouts": list(LAYOUTS), "models": {}}
+    import datetime
+    import subprocess
+
+    try:
+        rev = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True,
+                             cwd=ROOT).stdout.strip()
+    except Exception:  # noqa: BLE001
+        rev = ""
+    kst = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
+    manifest = {"updated": kst.strftime("%Y.%m.%d"), "rev": rev, "H": H, "D": D, "widths": WIDTHS, "tops": TOPS, "layouts": list(LAYOUTS), "models": {}}
     for W in WIDTHS:
         for top in TOPS:
             for lk, lmap in LAYOUTS.items():
