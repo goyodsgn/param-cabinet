@@ -15,7 +15,8 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: #fff; color: var(--ink);
     font-family: "Pretendard", "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif; }
-  .wrap { display: flex; flex-direction: column; gap: 12px; padding: 14px; height: 100%; min-height: 560px; }
+  .wrap { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 14px; height: 100%; }
+  #panel { display: flex; flex-direction: column; gap: 12px; }
   #view { position: relative; flex: 1; min-height: 300px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
     background: radial-gradient(circle at 50% 40%, #dcdad5, #bebbb4); }
   #view canvas { display: block; width: 100%; height: 100%; }
@@ -31,13 +32,26 @@
   .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
   .info { font-size: 13px; line-height: 1.6; border-top: 1px solid var(--line); padding-top: 8px; }
   .info b { font-weight: 600; }
+  /* Compact mode for small embeds: the 3D fills the frame, options open over it */
+  #toggle { display: none; position: absolute; top: 10px; left: 10px; z-index: 3; font: inherit; font-size: 13px;
+    color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; cursor: default; }
+  #toggle:hover { border-color: var(--ink); }
+  body.compact .wrap { padding: 0; gap: 0; min-height: 0; }
+  body.compact #view { border: 0; border-radius: 0; }
+  body.compact #toggle { display: block; }
+  body.compact #panel { display: none; position: absolute; inset: 48px 10px 10px 10px; z-index: 2; overflow: auto;
+    background: rgba(255,255,255,.96); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  body.compact.open #panel { display: flex; flex-direction: column; gap: 12px; }
+  body.compact input[type=range] { width: 160px; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div id="view"></div>
-  <div class="controls" id="controls"></div>
-  <div class="info" id="info"></div>
+<div class="wrap" id="wrap">
+  <div id="view"><button type="button" id="toggle"></button></div>
+  <div id="panel">
+    <div class="controls" id="controls"></div>
+    <div class="info" id="info"></div>
+  </div>
 </div>
 <script type="module">
 import * as THREE from "three";
@@ -284,6 +298,18 @@ function update(redrawControls = true) {
   document.getElementById("info").innerHTML = T.info(L) + "<br>" + T.note +
     (version.updated ? "<br>" + T.updated(version.updated, version.rev) : "");
 }
+
+// small frame (e.g. an embed on the portfolio page): 3D fills it, options open over it
+const toggle = document.getElementById("toggle");
+const TOG = EN ? ["Options", "Close"] : ["옵션", "닫기"];
+function setCompact() {
+  const compact = window.innerHeight < 640;
+  document.body.classList.toggle("compact", compact);
+  toggle.textContent = document.body.classList.contains("open") ? TOG[1] : TOG[0];
+}
+toggle.addEventListener("click", () => { document.body.classList.toggle("open"); setCompact(); });
+window.addEventListener("resize", setCompact);
+setCompact();
 
 resize();
 fetch("version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
