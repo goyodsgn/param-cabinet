@@ -314,6 +314,8 @@ function liftView() {
   const ph = document.body.classList.contains("compact") ? document.getElementById("panel").getBoundingClientRect().height : 0;
   const r = view.getBoundingClientRect();
   if (ph) camera.setViewOffset(r.width, r.height, 0, ph / 2, r.width, r.height); else camera.clearViewOffset();
+  // zoom out so the whole cabinet fits in the space left above the options
+  camera.zoom = ph ? Math.max(0.4, (r.height - ph) / r.height) : 1;
   camera.updateProjectionMatrix();
 }
 new ResizeObserver(liftView).observe(document.getElementById("panel"));
