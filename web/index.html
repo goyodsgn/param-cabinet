@@ -207,7 +207,7 @@ function frame() {
   controls.target.set(0, (state.H / 2) * S, 0);
   if (!framed) {
     const size = Math.max(state.W, state.H) * S;
-    const dist = size * 2.6 + 0.6;
+    const dist = size * 2.0 + 0.5;
     camera.position.set(-dist * 0.45, state.H * S * 0.75 + dist * 0.35, dist * 0.82);
     framed = true;
   }
