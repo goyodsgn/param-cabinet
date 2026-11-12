@@ -1,0 +1,251 @@
+import math
+import cadquery as cq
+
+PARAMS = {
+    "W": 1500,
+    "H": 850,
+    "D": 600,
+    "leg_h": 100,
+    "back_mode": "onset",
+    "top_mode": "onset",     # top panel covers the top of the sides
+    "t": 18,
+    "back_t": 10,
+    "divider_t": 18,
+    "door_t": 22,
+    "shelf_t": 30,
+    "door_gap": 2,
+    "door_max_w": 600,
+    "n_doors": None,
+    "door_layout": [1, 2],   # left: single door, right: double door (pair)
+    "n_shelves": None,
+    "shelf_min_gap": 320,
+    "bottom_clear_min": None,
+    "pin_max_spacing": 500,
+    "leg_max_spacing": 600,
+    # extra values
+    "pin_d": 5,
+    "pin_len": 14,
+    "pin_hole_depth": 8,
+    "pin_edge": 50,
+    "shelf_side_clear": 1,
+    "cup_d": 35,
+    "cup_depth": 12,
+    "cup_edge": 22.5,
+    "cup_end": 100,
+    "leg_d": 40,
+    "leg_corner_gap": 30,
+    "notes": [
+        "3 door cells of 500 mm: single door on the left, double door (pair) on the right.",
+        "One inner wall at x = 500 between the single door and the pair.",
+        "Top panel covers the sides (onset): top is W wide, sides run from leg_h to H - t.",
+    ],
+}
+
+
+def _box(x0, x1, y0, y1, z0, z1):
+    return (cq.Workplane("XY")
+            .box(x1 - x0, y1 - y0, z1 - z0, centered=False)
+            .translate((x0, y0, z0)).val())
+
+
+def _cyl(r, h, x, y, z, d):
+    return cq.Solid.makeCylinder(r, h, cq.Vector(x, y, z), cq.Vector(*d))
+
+
+def _cut_all(solid, cutters):
+    s = solid
+    for c in cutters:
+        s = s.cut(c)
+    sols = s.Solids()
+    return sols[0] if sols else s
+
+
+def build(params):
+    p = params
+    W, H, D = p["W"], p["H"], p["D"]
+    leg_h = p["leg_h"]
+    t, back_t, div_t = p["t"], p["back_t"], p["divider_t"]
+    door_t, shelf_t, gap = p["door_t"], p["shelf_t"], p["door_gap"]
+    top_mode, back_mode = p["top_mode"], p["back_mode"]
+    Dc = D - door_t - gap
+    parts = []
+
+    # ---------- door layout ----------
+    max_w = p["door_max_w"]
+    n_min = max(1, math.ceil(W / max_w))
+    layout = p["door_layout"]
+    if layout:
+        layout = list(layout)
+        if W / sum(layout) > max_w + 1e-9:
+            layout = None  # would break the ABSOLUTE 600 rule
+    if layout:
+        n = sum(layout)
+    else:
+        n = p["n_doors"] if p["n_doors"] else n_min
+        n = max(n, n_min)
+        layout = [1] * n
+    cell = W / n
+    only_single = all(b == 1 for b in layout)
+
+    # ---------- carcass geometry ----------
+    has_top = top_mode != "none"
+    side_z1 = H - t if top_mode == "onset" else H
+    depth_c = Dc - back_t if back_mode == "onset" else Dc
+    inner_y1 = Dc - back_t
+    clear_z0 = leg_h + t
+    clear_z1 = H - t if has_top else H
+    clear_h = clear_z1 - clear_z0
+
+    divider_x = []
+    j = 0
+    for b in layout[:-1]:
+        j += b
+        divider_x.append(j * cell)
+    panels = [("side_left", 0, t)]
+    for i, xc in enumerate(divider_x):
+        panels.append(("divider_%d" % (i + 1), xc - div_t / 2, xc + div_t / 2))
+    panels.append(("side_right", W - t, W))
+
+    # bays: (left panel name, right panel name, x0, x1)
+    bays = []
+    for a, b in zip(panels[:-1], panels[1:]):
+        bays.append((a[0], b[0], a[2], b[1]))
+
+    # ---------- shelves ----------
+    sh_min = p["shelf_min_gap"]
+    bcm = p["bottom_clear_min"]
+    if p["n_shelves"] is not None:
+        k = max(0, int(p["n_shelves"]))
+        bcm_eff = None
+    elif bcm is None:
+        k = max(0, int(math.floor((clear_h - sh_min) / (sh_min + shelf_t))))
+        bcm_eff = None
+    else:
+        k = max(0, int(math.floor((clear_h - max(bcm, sh_min)) / (sh_min + shelf_t))))
+        bcm_eff = bcm
+    shelf_bottoms = []
+    if k > 0:
+        g = (clear_h - k * shelf_t) / (k + 1)
+        if bcm_eff is not None and g < bcm_eff:
+            g2 = (clear_h - bcm_eff - k * shelf_t) / k
+            shelf_bottoms.append(clear_z0 + bcm_eff)
+            for i in range(1, k):
+                shelf_bottoms.append(clear_z0 + bcm_eff + shelf_t + g2 * i + shelf_t * (i - 1))
+        else:
+            for i in range(k):
+                shelf_bottoms.append(clear_z0 + g * (i + 1) + shelf_t * i)
+
+    # pin positions along depth
+    shelf_depth = inner_y1
+    pe = p["pin_edge"]
+    span = shelf_depth - 2 * pe
+    m = int(math.ceil(span / p["pin_max_spacing"])) + 1 if span > 0 else 1
+    if m > 1:
+        pin_ys = [pe + i * span / (m - 1) for i in range(m)]
+    else:
+        pin_ys = [pe]
+
+    pr = p["pin_d"] / 2
+    plen = p["pin_len"]
+    hd = p["pin_hole_depth"]
+    out = plen - hd
+    sclear = p["shelf_side_clear"]
+
+    holes = {name: [] for name, _, _ in panels}
+    pins = []
+    shelves = []
+    for (ln, rn, bx0, bx1) in bays:
+        for zb in shelf_bottoms:
+            shelves.append(_box(bx0 + sclear, bx1 - sclear, 0, shelf_depth, zb, zb + shelf_t))
+            pz = zb - p["pin_d"] / 2
+            for y in pin_ys:
+                pins.append(_cyl(pr, plen, bx0 - hd, y, pz, (1, 0, 0)))
+                holes[ln].append(_cyl(pr, hd, bx0 - hd, y, pz, (1, 0, 0)))
+                pins.append(_cyl(pr, plen, bx1 - out, y, pz, (1, 0, 0)))
+                holes[rn].append(_cyl(pr, hd, bx1, y, pz, (1, 0, 0)))
+
+    # ---------- carcass panels ----------
+    side_l = _box(0, t, 0, depth_c, leg_h, side_z1)
+    side_r = _box(W - t, W, 0, depth_c, leg_h, side_z1)
+    parts.append(("side_left", _cut_all(side_l, holes["side_left"])))
+    parts.append(("side_right", _cut_all(side_r, holes["side_right"])))
+
+    if top_mode == "inset":
+        parts.append(("top", _box(t, W - t, 0, depth_c, H - t, H)))
+    elif top_mode == "onset":
+        parts.append(("top", _box(0, W, 0, depth_c, H - t, H)))
+    parts.append(("bottom", _box(t, W - t, 0, depth_c, leg_h, leg_h + t)))
+
+    if back_mode == "onset":
+        parts.append(("back", _box(0, W, Dc - back_t, Dc, leg_h, H)))
+    else:
+        parts.append(("back", _box(t, W - t, Dc - back_t, Dc, clear_z0, clear_z1)))
+
+    for i, xc in enumerate(divider_x):
+        name = "divider_%d" % (i + 1)
+        d = _box(xc - div_t / 2, xc + div_t / 2, 0, inner_y1, clear_z0, clear_z1)
+        parts.append((name, _cut_all(d, holes[name])))
+
+    for i, s in enumerate(shelves):
+        parts.append(("shelf_%d" % (i + 1), s))
+    for i, pn in enumerate(pins):
+        parts.append(("pin_%d" % (i + 1), pn))
+
+    # ---------- doors ----------
+    hinge = []
+    if only_single:
+        for i in range(n):
+            hinge.append("L" if i % 2 == 0 else "R")
+        if n > 1 and n % 2 == 1:
+            hinge[-1] = "R"
+    else:
+        idx = 0
+        for b in layout:
+            if b == 2:
+                hinge.append("L")
+                hinge.append("R")
+            else:
+                cx = idx * cell + cell / 2
+                hinge.append("L" if cx <= W / 2 else "R")
+            idx += b
+
+    dw = cell - 2 * gap
+    dh = (H - leg_h) - 2 * gap
+    dz0 = leg_h + gap
+    if dh <= 900:
+        nc = 2
+    elif dh <= 1600:
+        nc = 3
+    else:
+        nc = 4
+    ce = p["cup_end"]
+    cup_zs = [dz0 + ce + i * (dh - 2 * ce) / (nc - 1) for i in range(nc)]
+    for i in range(n):
+        xl = i * cell + gap
+        door = _box(xl, xl + dw, -(gap + door_t), -gap, dz0, dz0 + dh)
+        cx = xl + p["cup_edge"] if hinge[i] == "L" else xl + dw - p["cup_edge"]
+        cups = [_cyl(p["cup_d"] / 2, p["cup_depth"], cx, -gap - p["cup_depth"], z, (0, 1, 0))
+                for z in cup_zs]
+        parts.append(("door_%d" % (i + 1), _cut_all(door, cups)))
+
+    # ---------- legs ----------
+    lr = p["leg_d"] / 2
+    off = p["leg_corner_gap"] + lr
+    lmax = p["leg_max_spacing"]
+
+    def line(a, b):
+        sp = b - a
+        cnt = int(math.ceil(sp / lmax)) + 1 if sp > 0 else 1
+        if cnt == 1:
+            return [a]
+        return [a + i * sp / (cnt - 1) for i in range(cnt)]
+
+    xs = line(off, W - off)
+    ys = line(off, Dc - off)
+    li = 1
+    for y in ys:
+        for x in xs:
+            parts.append(("leg_%d" % li, _cyl(lr, leg_h, x, y, 0, (0, 0, 1))))
+            li += 1
+
+    return parts

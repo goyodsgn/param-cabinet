@@ -1,0 +1,246 @@
+```python
+import math
+import cadquery as cq
+
+PARAMS = {
+    "W": 750,
+    "H": 850,
+    "D": 600,
+    "leg_h": 100,
+    "back_mode": "onset",
+    "top_mode": "none",          # sink base cabinet: no top panel
+    "t": 18,
+    "back_t": 10,
+    "divider_t": 18,
+    "door_t": 22,
+    "shelf_t": 30,
+    "door_gap": 2,
+    "door_max_w": 600,
+    "n_doors": None,             # automatic: ceil(750 / 600) = 2
+    "door_layout": [2],          # one bay with a double door (양문형)
+    "n_shelves": None,           # automatic
+    "shelf_min_gap": 320,
+    "bottom_clear_min": None,
+    "pin_max_spacing": 500,
+    "leg_max_spacing": 600,
+    "notes": [
+        "싱크대 하부장이므로 상판 없음(top_mode none): 측판, 뒤판이 상단(z=H)까지 올라갑니다.",
+        "가로 750은 문 폭 한도 600을 넘으므로 문 2개가 필요합니다. 요청에 따라 양문형 한 쌍(door_layout=[2])으로 구성했습니다.",
+        "양문형은 문 사이에 칸막이를 두지 않으므로 중간 칸막이 없이 하나의 넓은 칸이 됩니다.",
+    ],
+}
+
+
+def _box(x0, x1, y0, y1, z0, z1):
+    return (cq.Workplane("XY")
+            .box(x1 - x0, y1 - y0, z1 - z0, centered=False)
+            .translate((x0, y0, z0)))
+
+
+def _cyl_x(x0, length, y, z, d):
+    # cylinder along +x starting at x0
+    return (cq.Workplane("YZ").workplane(offset=x0)
+            .center(y, z).circle(d / 2.0).extrude(length))
+
+
+def build(params):
+    p = params
+    W, H, D = p["W"], p["H"], p["D"]
+    leg_h = p["leg_h"]
+    t, back_t, div_t = p["t"], p["back_t"], p["divider_t"]
+    door_t, shelf_t, gap = p["door_t"], p["shelf_t"], p["door_gap"]
+    max_w = p["door_max_w"]
+    top_mode, back_mode = p["top_mode"], p["back_mode"]
+
+    Dc = D - door_t - gap
+    n_min = max(1, math.ceil(W / max_w))
+
+    # ---------- door layout ----------
+    layout = p.get("door_layout")
+    if layout:
+        layout = list(layout)
+        if sum(layout) < n_min:
+            layout = None
+    if layout:
+        n = sum(layout)
+    else:
+        n = n_min
+        if p.get("n_doors"):
+            n = max(int(p["n_doors"]), n_min)
+        layout = [1] * n
+    cw = W / n
+
+    # ---------- carcass extents ----------
+    has_top = top_mode in ("inset", "onset")
+    z_c0 = leg_h
+    z_top_clear = H - t if has_top else H
+    inner_depth = Dc - back_t
+    carc_depth = inner_depth if back_mode == "onset" else Dc
+    side_top = H - t if top_mode == "onset" else H
+
+    panels = {}
+    panels["side_left"] = _box(0, t, 0, carc_depth, z_c0, side_top)
+    panels["side_right"] = _box(W - t, W, 0, carc_depth, z_c0, side_top)
+    panels["bottom"] = _box(t, W - t, 0, carc_depth, z_c0, z_c0 + t)
+    if top_mode == "inset":
+        panels["top"] = _box(t, W - t, 0, carc_depth, H - t, H)
+    elif top_mode == "onset":
+        panels["top"] = _box(0, W, 0, carc_depth, H - t, H)
+
+    if back_mode == "onset":
+        panels["back"] = _box(0, W, Dc - back_t, Dc, z_c0, H)
+    else:
+        panels["back"] = _box(t, W - t, Dc - back_t, Dc, z_c0 + t, z_top_clear)
+
+    # ---------- bays and dividers ----------
+    bays = []          # (first door index, door count)
+    idx = 0
+    for b in layout:
+        bays.append((idx, b))
+        idx += b
+
+    divider_x = []
+    for bi in range(1, len(bays)):
+        divider_x.append(bays[bi][0] * cw)
+
+    div_names = []
+    for k, x in enumerate(divider_x):
+        name = "divider_%d" % (k + 1)
+        panels[name] = _box(x - div_t / 2.0, x + div_t / 2.0, 0, inner_depth,
+                            z_c0 + t, z_top_clear)
+        div_names.append(name)
+
+    bay_info = []   # (xl, xr, left_panel_name, right_panel_name)
+    for bi in range(len(bays)):
+        if bi == 0:
+            xl, ln = t, "side_left"
+        else:
+            xl, ln = divider_x[bi - 1] + div_t / 2.0, div_names[bi - 1]
+        if bi == len(bays) - 1:
+            xr, rn = W - t, "side_right"
+        else:
+            xr, rn = divider_x[bi] - div_t / 2.0, div_names[bi]
+        bay_info.append((xl, xr, ln, rn))
+
+    # ---------- shelves ----------
+    clear_h = z_top_clear - (z_c0 + t)
+    bcm = p.get("bottom_clear_min")
+    min_gap = p["shelf_min_gap"]
+    if p.get("n_shelves") is not None:
+        k = max(0, int(p["n_shelves"]))
+    else:
+        base = max(bcm, min_gap) if bcm else min_gap
+        k = max(0, int(math.floor((clear_h - base) / (min_gap + shelf_t))))
+
+    shelf_bottoms = []
+    zb = z_c0 + t
+    if k > 0:
+        g = (clear_h - k * shelf_t) / (k + 1)
+        if bcm and g < bcm:
+            g2 = (clear_h - bcm - k * shelf_t) / k
+            shelf_bottoms = [zb + bcm + j * (shelf_t + g2) for j in range(k)]
+        else:
+            shelf_bottoms = [zb + (j + 1) * g + j * shelf_t for j in range(k)]
+
+    shelves = []
+    pins = []
+    pin_d, pin_len, pin_in, pin_out = 5.0, 14.0, 8.0, 6.0
+    shelf_depth = inner_depth
+    span = shelf_depth - 2 * 50
+    n_pin = int(math.ceil(span / p["pin_max_spacing"])) + 1
+    pin_ys = [50 + i * span / (n_pin - 1) for i in range(n_pin)]
+
+    holes = {}
+
+    for (xl, xr, ln, rn) in bay_info:
+        for zs in shelf_bottoms:
+            shelves.append(_box(xl + 1, xr - 1, 0, shelf_depth, zs, zs + shelf_t))
+            zc = zs - pin_d / 2.0
+            for y in pin_ys:
+                # left pin: 8 into the left panel, 6 out into the bay
+                pins.append(_cyl_x(xl - pin_in, pin_len, y, zc, pin_d))
+                holes.setdefault(ln, []).append(
+                    _cyl_x(xl - pin_in, pin_in, y, zc, pin_d))
+                # right pin
+                pins.append(_cyl_x(xr - pin_out, pin_len, y, zc, pin_d))
+                holes.setdefault(rn, []).append(
+                    _cyl_x(xr, pin_in, y, zc, pin_d))
+
+    for name, cutters in holes.items():
+        w = panels[name]
+        for c in cutters:
+            w = w.cut(c)
+        panels[name] = w
+
+    # ---------- doors ----------
+    door_w = cw - 2 * gap
+    door_h = (H - leg_h) - 2 * gap
+    if door_h <= 900:
+        n_hinge = 2
+    elif door_h <= 1600:
+        n_hinge = 3
+    else:
+        n_hinge = 4
+    hz = [100 + i * (door_h - 200) / (n_hinge - 1) for i in range(n_hinge)]
+
+    all_single = all(b == 1 for b in layout)
+    hinge = []
+    if all_single:
+        for i in range(n):
+            hinge.append("L" if i % 2 == 0 else "R")
+        if n > 1 and n % 2 == 1:
+            hinge[-1] = "R"
+    else:
+        for (first, cnt) in bays:
+            if cnt == 2:
+                hinge += ["L", "R"]
+            else:
+                center = first * cw + cw / 2.0
+                hinge.append("L" if center <= W / 2.0 else "R")
+
+    doors = []
+    for i in range(n):
+        x0 = i * cw + gap
+        z0 = leg_h + gap
+        d = _box(x0, x0 + door_w, -(gap + door_t), -gap, z0, z0 + door_h)
+        cx = x0 + 22.5 if hinge[i] == "L" else x0 + door_w - 22.5
+        for zz in hz:
+            cup = (cq.Workplane("XZ").workplane(offset=gap)
+                   .center(cx, z0 + zz).circle(35 / 2.0).extrude(12))
+            d = d.cut(cup)
+        doors.append(d)
+
+    # ---------- legs ----------
+    leg_d = 40
+    corner = 30 + leg_d / 2.0
+    x_span = (W - corner) - corner
+    y_span = (Dc - corner) - corner
+    nx = int(math.ceil(x_span / p["leg_max_spacing"])) + 1
+    ny = int(math.ceil(y_span / p["leg_max_spacing"])) + 1
+    legs = []
+    for ix in range(nx):
+        lx = corner + ix * x_span / (nx - 1)
+        for iy in range(ny):
+            ly = corner + iy * y_span / (ny - 1)
+            legs.append(cq.Workplane("XY").center(lx, ly)
+                        .circle(leg_d / 2.0).extrude(leg_h))
+
+    # ---------- collect ----------
+    parts = []
+    order = ["side_left", "side_right", "top", "bottom", "back"] + div_names
+    for name in order:
+        if name in panels:
+            parts.append((name, panels[name].val()))
+    for i, s in enumerate(shelves):
+        parts.append(("shelf_%d" % (i + 1), s.val()))
+    for i, s in enumerate(pins):
+        parts.append(("pin_%d" % (i + 1), s.val()))
+    for i, s in enumerate(doors):
+        parts.append(("door_%d" % (i + 1), s.val()))
+    for i, s in enumerate(legs):
+        parts.append(("leg_%d" % (i + 1), s.val()))
+    return parts
+
+
+result = build(PARAMS)
+```

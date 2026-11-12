@@ -1,0 +1,247 @@
+import math
+import cadquery as cq
+
+PARAMS = {
+    "W": 1200,          # inner width 1164 = W - 2*t  ->  W = 1164 + 36 = 1200
+    "H": 850,
+    "D": 580,
+    "leg_h": 100,
+    "back_mode": "onset",
+    "top_mode": "inset",
+    "t": 18,
+    "back_t": 10,
+    "divider_t": 18,
+    "door_t": 22,
+    "shelf_t": 30,
+    "door_gap": 2,
+    "door_max_w": 600,
+    "n_doors": None,
+    "door_layout": None,
+    "n_shelves": None,
+    "shelf_min_gap": 320,
+    "bottom_clear_min": None,
+    "pin_max_spacing": 500,
+    "leg_max_spacing": 600,
+    "notes": [
+        "내경 폭 1164mm = W - 2*18 이므로 전체 폭 W = 1200mm로 설정했습니다.",
+        "높이 850, 깊이 580은 요청대로 전체(문, 다리 포함) 외곽 치수입니다.",
+    ],
+}
+
+
+def _box(x0, x1, y0, y1, z0, z1):
+    return (cq.Workplane("XY")
+            .box(x1 - x0, y1 - y0, z1 - z0, centered=False)
+            .translate((x0, y0, z0)).val())
+
+
+def _cyl(r, h, p, d):
+    return cq.Solid.makeCylinder(r, h, cq.Vector(*p), cq.Vector(*d))
+
+
+def _cut(solid, tools):
+    res = solid
+    for tl in tools:
+        res = res.cut(tl)
+    sols = res.Solids()
+    return sols[0] if sols else res
+
+
+def build(params):
+    W = params["W"]; H = params["H"]; D = params["D"]
+    leg_h = params["leg_h"]
+    back_mode = params["back_mode"]; top_mode = params["top_mode"]
+    t = params["t"]; back_t = params["back_t"]; dt = params["divider_t"]
+    door_t = params["door_t"]; st = params["shelf_t"]
+    gap = params["door_gap"]; max_w = params["door_max_w"]
+    min_gap = params["shelf_min_gap"]
+    bcm = params["bottom_clear_min"]
+    pin_max = params["pin_max_spacing"]
+    leg_max = params["leg_max_spacing"]
+
+    Dc = D - door_t - gap
+    has_top = top_mode != "none"
+
+    # ---------- door count / layout ----------
+    layout = params.get("door_layout")
+    if layout:
+        n = sum(layout)
+        if W / n > max_w:
+            layout = None
+    if not layout:
+        layout = None
+        n = max(1, math.ceil(W / max_w))
+        if params.get("n_doors"):
+            n = max(n, params["n_doors"])
+        bays = [1] * n
+    else:
+        bays = list(layout)
+    cw = W / n
+
+    # ---------- carcass geometry ----------
+    if back_mode == "onset":
+        pan_d = Dc - back_t
+    else:
+        pan_d = Dc
+    inner_d = Dc - back_t           # depth for walls / shelves
+    z_bot_in = leg_h + t            # top face of bottom panel
+    if top_mode == "inset":
+        side_top = H
+        z_top_in = H - t
+    elif top_mode == "onset":
+        side_top = H - t
+        z_top_in = H - t
+    else:
+        side_top = H
+        z_top_in = H
+    clear_h = z_top_in - z_bot_in
+
+    parts = {}   # name -> solid (panels that may get holes)
+    order = []
+
+    parts["side_left"] = _box(0, t, 0, pan_d, leg_h, side_top)
+    parts["side_right"] = _box(W - t, W, 0, pan_d, leg_h, side_top)
+    parts["bottom"] = _box(t, W - t, 0, pan_d, leg_h, leg_h + t)
+    if top_mode == "inset":
+        parts["top"] = _box(t, W - t, 0, pan_d, H - t, H)
+    elif top_mode == "onset":
+        parts["top"] = _box(0, W, 0, pan_d, H - t, H)
+    if back_mode == "onset":
+        parts["back"] = _box(0, W, Dc - back_t, Dc, leg_h, H)
+    else:
+        parts["back"] = _box(t, W - t, Dc - back_t, Dc, z_bot_in, z_top_in)
+
+    # ---------- bays & dividers ----------
+    bounds = []  # cell index j at bay boundaries (interior)
+    c = 0
+    for b in bays[:-1]:
+        c += b
+        bounds.append(c)
+    div_x = [j * cw for j in bounds]
+    for k, x in enumerate(div_x):
+        parts["divider_%d" % (k + 1)] = _box(x - dt / 2, x + dt / 2, 0, inner_d,
+                                             z_bot_in, z_top_in)
+
+    nb = len(bays)
+    bay_lr = []
+    for i in range(nb):
+        left = t if i == 0 else div_x[i - 1] + dt / 2
+        right = W - t if i == nb - 1 else div_x[i] - dt / 2
+        bay_lr.append((left, right))
+
+    # ---------- shelf levels ----------
+    if params.get("n_shelves") is not None:
+        k = max(0, params["n_shelves"])
+    else:
+        base = max(bcm, min_gap) if bcm is not None else min_gap
+        k = max(0, math.floor((clear_h - base) / (min_gap + st)))
+    shelf_z = []
+    if k > 0:
+        g = (clear_h - k * st) / (k + 1)
+        if bcm is not None and params.get("n_shelves") is None and g < bcm:
+            g1 = bcm
+            g_rest = (clear_h - k * st - bcm) / k
+            gaps = [g1] + [g_rest] * k
+        else:
+            gaps = [g] * (k + 1)
+        z = z_bot_in
+        for j in range(k):
+            z += gaps[j]
+            shelf_z.append(z)
+            z += st
+
+    # ---------- shelves & pins ----------
+    shelves = []
+    pins = []
+    holes = {}  # panel name -> list of cutters
+    span = inner_d - 2 * 50
+    n_p = math.ceil(span / pin_max) + 1
+    pin_ys = [50 + i * span / (n_p - 1) for i in range(n_p)]
+    r_pin = 2.5
+    for bi, (left, right) in enumerate(bay_lr):
+        lname = "side_left" if bi == 0 else "divider_%d" % bi
+        rname = "side_right" if bi == nb - 1 else "divider_%d" % (bi + 1)
+        for zs in shelf_z:
+            shelves.append(_box(left + 1, right - 1, 0, inner_d, zs, zs + st))
+            zc = zs - 2.5
+            for y in pin_ys:
+                # left pin: 8 into left panel, 6 out into bay
+                pins.append(_cyl(r_pin, 14, (left - 8, y, zc), (1, 0, 0)))
+                holes.setdefault(lname, []).append(
+                    _cyl(r_pin, 8, (left - 8, y, zc), (1, 0, 0)))
+                # right pin
+                pins.append(_cyl(r_pin, 14, (right - 6, y, zc), (1, 0, 0)))
+                holes.setdefault(rname, []).append(
+                    _cyl(r_pin, 8, (right, y, zc), (-1, 0, 0)).translate(
+                        cq.Vector(8, 0, 0)) if False else
+                    _cyl(r_pin, 8, (right + 8, y, zc), (-1, 0, 0)))
+
+    for name, tools in holes.items():
+        parts[name] = _cut(parts[name], tools)
+
+    # ---------- doors ----------
+    hinge_left = []
+    if layout is None or all(b == 1 for b in bays):
+        for i in range(n):
+            left = (i % 2 == 0)
+            if n > 1 and n % 2 == 1 and i == n - 1:
+                left = False
+            hinge_left.append(left)
+    else:
+        c = 0
+        for b in bays:
+            if b == 2:
+                hinge_left += [True, False]
+            else:
+                center = (c + 0.5) * cw
+                hinge_left.append(center <= W / 2)
+            c += b
+
+    door_h = (H - leg_h) - 2 * gap
+    door_w = cw - 2 * gap
+    if door_h <= 900:
+        n_h = 2
+    elif door_h <= 1600:
+        n_h = 3
+    else:
+        n_h = 4
+    z_d0 = leg_h + gap
+    cup_zs = [z_d0 + 100 + i * (door_h - 200) / (n_h - 1) for i in range(n_h)]
+    doors = []
+    for i in range(n):
+        x0 = i * cw + gap
+        x1 = x0 + door_w
+        d = _box(x0, x1, -(gap + door_t), -gap, z_d0, z_d0 + door_h)
+        cx = x0 + 22.5 if hinge_left[i] else x1 - 22.5
+        cups = [_cyl(17.5, 12, (cx, -gap, zc), (0, -1, 0)) for zc in cup_zs]
+        doors.append(_cut(d, cups))
+
+    # ---------- legs ----------
+    legs = []
+    lx0, lx1 = 30 + 20, W - 50
+    ly0, ly1 = 30 + 20, Dc - 50
+    nx = math.ceil((lx1 - lx0) / leg_max) + 1
+    ny = math.ceil((ly1 - ly0) / leg_max) + 1
+    for ix in range(nx):
+        x = lx0 + ix * (lx1 - lx0) / (nx - 1)
+        for iy in range(ny):
+            y = ly0 + iy * (ly1 - ly0) / (ny - 1)
+            legs.append(_cyl(20, leg_h, (x, y, 0), (0, 0, 1)))
+
+    # ---------- assemble ----------
+    out = []
+    for nm in ["side_left", "side_right", "top", "bottom", "back"]:
+        if nm in parts:
+            out.append((nm, parts[nm]))
+    for k2 in range(len(div_x)):
+        nm = "divider_%d" % (k2 + 1)
+        out.append((nm, parts[nm]))
+    for i, s in enumerate(shelves):
+        out.append(("shelf_%d" % (i + 1), s))
+    for i, p in enumerate(pins):
+        out.append(("pin_%d" % (i + 1), p))
+    for i, d in enumerate(doors):
+        out.append(("door_%d" % (i + 1), d))
+    for i, l in enumerate(legs):
+        out.append(("leg_%d" % (i + 1), l))
+    return out
