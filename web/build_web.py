@@ -34,7 +34,8 @@ def oak_texture(size=512, seed=7):
     rng = np.random.default_rng(seed)
     y, x = np.mgrid[0:size, 0:size].astype(float) / size
     # broad grain bands running up the board, gently wandering sideways
-    wander = 0.012 * np.sin(2 * math.pi * (1.1 * y + rng.uniform())) + 0.006 * np.sin(2 * math.pi * (2.7 * y + rng.uniform()))
+    wander = (0.005 * np.sin(2 * math.pi * (0.9 * y + 2.3 * x + rng.uniform()))
+              + 0.003 * np.sin(2 * math.pi * (2.1 * y - 4.1 * x + rng.uniform())))
     bands = 0.5 + 0.5 * np.sin(2 * math.pi * (x + wander) * 11 + 1.5 * np.sin(2 * math.pi * x * 2))
     # fine streaks: per-column noise, stretched along the grain
     cols = np.convolve(rng.normal(0, 1, size * 3), np.ones(3) / 3, mode="same")[size:2 * size]
