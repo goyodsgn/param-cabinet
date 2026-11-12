@@ -38,17 +38,20 @@
   #toggle:hover { border-color: var(--ink); }
   body.compact .wrap { padding: 0; gap: 0; min-height: 0; }
   body.compact #view { border: 0; border-radius: 0; }
-  body.compact #toggle { display: block; }
-  body.compact #panel { display: none; position: absolute; left: 10px; right: 10px; bottom: 10px; max-height: calc(100% - 58px);
+  body.compact #panel { display: flex; flex-direction: column; gap: 8px; position: absolute; left: 10px; right: 10px; bottom: 10px; max-height: calc(100% - 58px);
     z-index: 2; overflow: auto; background: rgba(255,255,255,.93); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
   body.compact .info { font-size: 12px; }
-  body.compact.open #panel { display: flex; flex-direction: column; gap: 12px; }
-  body.compact input[type=range] { width: 160px; }
+  body.compact input[type=range] { width: 140px; }
+  body.compact .controls { gap: 8px 18px; }
+  body.compact .label { font-size: 12px; }
+  body.compact .seg button { font-size: 12px; padding: 3px 9px; }
+  body.compact .info { padding-top: 6px; }
+  body.compact .info .note { display: none; }
 </style>
 </head>
 <body>
 <div class="wrap" id="wrap">
-  <div id="view"><button type="button" id="toggle"></button></div>
+  <div id="view"></div>
   <div id="panel">
     <div class="controls" id="controls"></div>
     <div class="info" id="info"></div>
@@ -236,6 +239,7 @@ function resize() {
   renderer.setSize(r.width, r.height, false);
   camera.aspect = r.width / Math.max(r.height, 1);
   camera.updateProjectionMatrix();
+  if (typeof liftView === "function") liftView();
 }
 new ResizeObserver(resize).observe(view);
 
@@ -296,28 +300,24 @@ function update(redrawControls = true) {
     old.replaceWith(lay);
     shownDoors = L.n;
   }
-  document.getElementById("info").innerHTML = T.info(L) + "<br>" + T.note +
+  document.getElementById("info").innerHTML = T.info(L) + `<span class="note"><br>${T.note}</span>` +
     (version.updated ? "<br>" + T.updated(version.updated, version.rev) : "");
 }
 
 // small frame (e.g. an embed on the portfolio page): 3D fills it, options open over it
-const toggle = document.getElementById("toggle");
-const TOG = EN ? ["Options", "Close"] : ["옵션", "닫기"];
 function setCompact() {
   const compact = window.innerHeight < 640;
   document.body.classList.toggle("compact", compact);
-  toggle.textContent = document.body.classList.contains("open") ? TOG[1] : TOG[0];
 }
-toggle.addEventListener("click", () => {
-  document.body.classList.toggle("open");
-  setCompact();
-  const open = document.body.classList.contains("compact") && document.body.classList.contains("open");
-  const ph = open ? document.getElementById("panel").getBoundingClientRect().height : 0;
+// in compact mode the options always sit over the bottom of the 3D; lift the cabinet above them
+function liftView() {
+  const ph = document.body.classList.contains("compact") ? document.getElementById("panel").getBoundingClientRect().height : 0;
   const r = view.getBoundingClientRect();
   if (ph) camera.setViewOffset(r.width, r.height, 0, ph / 2, r.width, r.height); else camera.clearViewOffset();
   camera.updateProjectionMatrix();
-});
-window.addEventListener("resize", setCompact);
+}
+new ResizeObserver(liftView).observe(document.getElementById("panel"));
+window.addEventListener("resize", () => { setCompact(); liftView(); });
 setCompact();
 
 resize();
