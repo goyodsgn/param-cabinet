@@ -149,16 +149,21 @@ def check_parts(parts):
 
     # Shelf pins
     ok("shelf_pins")
-    pins = [(n, b) for n, s, k, b in P if k == "pin"]
+    # Cylinder bounding boxes from OCC can be loose, so pins are located by their center of mass
+    pins = []
+    for n, s, k, b in P:
+        if k == "pin":
+            c = s.Center()
+            pins.append((n, {"cx": c.x, "cy": c.y, "cz": c.z}))
     for n, s, k, b in P:
         if k != "shelf":
             continue
         depth = b["y1"] - b["y0"]
         need = math.ceil(max(depth - 2 * PIN_END, 0) / PIN_MAX) + 1
         for side, x in (("left", b["x0"]), ("right", b["x1"])):
-            ys = sorted((p["y0"] + p["y1"]) / 2 for _, p in pins
-                        if abs(p["z1"] - b["z0"]) < 1.5 and p["x0"] - 15 < x < p["x1"] + 15
-                        and b["y0"] - TOL <= (p["y0"] + p["y1"]) / 2 <= b["y1"] + TOL)
+            ys = sorted(p["cy"] for _, p in pins
+                        if b["z0"] - 6 < p["cz"] < b["z0"] and abs(p["cx"] - x) < 12
+                        and b["y0"] - TOL <= p["cy"] <= b["y1"] + TOL)
             if len(ys) != need:
                 fail("shelf_pins", f"{n} {side}: {len(ys)} pins for shelf depth {depth:.0f}, rule {need}")
                 continue
@@ -170,11 +175,16 @@ def check_parts(parts):
     # Legs
     ok("leg_spacing")
     ok("leg_place")
-    legs = [b for n, s, k, b in P if k == "leg"]
+    legs = []
+    for n, s, k, b in P:
+        if k == "leg":
+            c = s.Center()
+            r2 = s.Volume() / (math.pi * max(b["z1"] - b["z0"], 1e-9))
+            legs.append({"cx": c.x, "cy": c.y, "d": 2 * math.sqrt(r2)})
     if legs:
-        d = legs[0]["x1"] - legs[0]["x0"]
+        d = legs[0]["d"]
         for axis, lo, hi in (("x", C["x0"], C["x1"]), ("y", C["y0"], C["y1"])):
-            cs = sorted({round((l[axis + "0"] + l[axis + "1"]) / 2, 1) for l in legs})
+            cs = sorted({round(l["c" + axis], 1) for l in legs})
             if any(q - p > LEG_MAX + TOL for p, q in zip(cs, cs[1:])):
                 fail("leg_spacing", f"legs along {axis}: {max(q - p for p, q in zip(cs, cs[1:])):.0f} apart > {LEG_MAX:.0f}")
             if abs(cs[0] - d / 2 - lo - LEG_INSET) > TOL or abs(hi - cs[-1] - d / 2 - LEG_INSET) > TOL:

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parametric cabinet 3D</title>
+<script type="module" src="https://unpkg.com/@google/model-viewer@^4/dist/model-viewer.min.js"></script>
+<style>
+  :root { --ink: #1f1f1f; --line: rgba(0,0,0,.14); --bg: #ffffff; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Pretendard", "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+  model-viewer { width: 100%; height: min(62vh, 560px); background: #f6f5f2; border: 1px solid var(--line);
+    border-radius: 8px; --poster-color: #f6f5f2; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px 22px; }
+  .group { display: flex; flex-direction: column; gap: 6px; }
+  .label { font-size: 13px; font-weight: 600; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button { font: inherit; font-size: 13px; color: var(--ink); background: #fff; border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 11px; cursor: default; }
+  .seg button:hover { border-color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .info { font-size: 13px; line-height: 1.6; border-top: 1px solid var(--line); padding-top: 10px; }
+  .info b { font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <model-viewer id="mv" camera-controls touch-action="pan-y" shadow-intensity="0.7" shadow-softness="0.8"
+    exposure="1.05" environment-image="neutral" camera-orbit="-28deg 76deg auto" field-of-view="28deg"
+    interaction-prompt="none" alt="parametric base cabinet"></model-viewer>
+  <div class="controls" id="controls"></div>
+  <div class="info" id="info"></div>
+</div>
+<script>
+const EN = new URLSearchParams(location.search).get("lang") === "en";
+const T = EN ? {
+  width: "Width (mm)", top: "Top panel", layout: "Doors", door: "Door",
+  tops: { inset: "Between the sides", onset: "Covering the sides", none: "None (sink)" },
+  layouts: { default: "Single doors", pair: "With a double door" },
+  doorState: { closed: "Closed", open: "Open" },
+  info: m => `<b>${m.doors}</b> doors · <b>${m.hinges}</b> hinges each · <b>${m.walls}</b> inner walls · <b>${m.shelves}</b> shelves · <b>${m.legs}</b> legs`,
+  note: "Height 850 · depth 600 mm. Every option is computed from the same parametric model and its company rules."
+} : {
+  width: "폭 (mm)", top: "상판", layout: "문 배치", door: "문",
+  tops: { inset: "측판 사이", onset: "위를 덮음", none: "없음 (싱크대)" },
+  layouts: { default: "한쪽문", pair: "양문 포함" },
+  doorState: { closed: "닫힘", open: "열림" },
+  info: m => `문 <b>${m.doors}</b>짝 · 문마다 힌지 <b>${m.hinges}</b>개 · 칸막이 <b>${m.walls}</b>개 · 선반 <b>${m.shelves}</b>개 · 다릿발 <b>${m.legs}</b>개`,
+  note: "높이 850 · 깊이 600mm. 모든 조합은 같은 파라메트릭 모델과 회사 규칙으로 계산했습니다."
+};
+const state = { w: 1500, top: "onset", layout: "pair", door: "closed" };
+let manifest = null;
+
+function seg(title, key, options) {
+  const g = document.createElement("div");
+  g.className = "group";
+  g.innerHTML = `<span class="label">${title}</span><div class="seg"></div>`;
+  const box = g.querySelector(".seg");
+  options.forEach(([value, text]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = text;
+    b.setAttribute("aria-pressed", String(state[key] === value));
+    b.addEventListener("click", () => { state[key] = value; render(); });
+    box.appendChild(b);
+  });
+  return g;
+}
+
+function render() {
+  const c = document.getElementById("controls");
+  c.innerHTML = "";
+  c.appendChild(seg(T.width, "w", manifest.widths.map(w => [w, String(w)])));
+  c.appendChild(seg(T.top, "top", manifest.tops.map(t => [t, T.tops[t]])));
+  c.appendChild(seg(T.layout, "layout", manifest.layouts.map(l => [l, T.layouts[l]])));
+  c.appendChild(seg(T.door, "door", [["closed", T.doorState.closed], ["open", T.doorState.open]]));
+  const key = `w${state.w}_${state.top}_${state.layout}_${state.door}`;
+  const m = manifest.models[key];
+  const mv = document.getElementById("mv");
+  if (mv.getAttribute("src") !== m.file) mv.setAttribute("src", m.file);
+  document.getElementById("info").innerHTML = T.info(m) + "<br>" + T.note;
+}
+
+fetch("models/manifest.json").then(r => r.json()).then(j => { manifest = j; render(); });
+</script>
+</body>
+</html>
