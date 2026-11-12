@@ -9,7 +9,7 @@ on:
       - "cabinet_reference.py"
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -22,19 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-      - run: pip install -r requirements.txt trimesh pillow
-      - name: Build the 3D models for every option
-        run: python web/build_web.py
-      - name: Keep the models in the repository
+      - name: Stamp the version shown under the viewer
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add web/models
-          git diff --cached --quiet || (git commit -m "Web viewer models [skip ci]" && git pull --rebase && git push)
+          echo "{\"updated\": \"$(TZ=Asia/Seoul date +%Y.%m.%d)\", \"rev\": \"$(git rev-parse --short HEAD)\"}" > web/version.json
+          cat web/version.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web

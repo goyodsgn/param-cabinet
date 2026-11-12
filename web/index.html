@@ -4,89 +4,288 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Parametric cabinet 3D</title>
-<script type="module" src="https://unpkg.com/@google/model-viewer@^4/dist/model-viewer.min.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
 <style>
-  :root { --ink: #1f1f1f; --line: rgba(0,0,0,.14); --bg: #ffffff; }
+  :root { --ink: #1f1f1f; --line: rgba(0,0,0,.14); }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--ink);
+  html, body { margin: 0; height: 100%; background: #fff; color: var(--ink);
     font-family: "Pretendard", "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif; }
-  .wrap { display: flex; flex-direction: column; gap: 14px; padding: 16px; }
-  model-viewer { width: 100%; height: min(62vh, 560px); background: radial-gradient(circle at 50% 40%, #d9d7d2, #bdbab3);
-    border: 1px solid var(--line); border-radius: 8px; --poster-color: #cfccc6; }
-  .controls { display: flex; flex-wrap: wrap; gap: 12px 22px; }
+  .wrap { display: flex; flex-direction: column; gap: 12px; padding: 14px; height: 100%; min-height: 560px; }
+  #view { position: relative; flex: 1; min-height: 300px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+    background: radial-gradient(circle at 50% 40%, #dcdad5, #bebbb4); }
+  #view canvas { display: block; width: 100%; height: 100%; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; }
   .group { display: flex; flex-direction: column; gap: 6px; }
   .label { font-size: 13px; font-weight: 600; }
+  .label span { font-weight: 400; margin-left: 6px; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 210px; accent-color: #1f1f1f; cursor: default; }
   .seg { display: flex; flex-wrap: wrap; gap: 6px; }
   .seg button { font: inherit; font-size: 13px; color: var(--ink); background: #fff; border: 1px solid var(--line);
     border-radius: 6px; padding: 5px 11px; cursor: default; }
   .seg button:hover { border-color: var(--ink); }
   .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
-  .info { font-size: 13px; line-height: 1.6; border-top: 1px solid var(--line); padding-top: 10px; }
+  .info { font-size: 13px; line-height: 1.6; border-top: 1px solid var(--line); padding-top: 8px; }
   .info b { font-weight: 600; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <model-viewer id="mv" camera-controls touch-action="pan-y" shadow-intensity="1" shadow-softness="0.8"
-    exposure="1.05" environment-image="neutral" camera-orbit="-28deg 76deg auto" field-of-view="28deg"
-    interaction-prompt="none" alt="parametric base cabinet"></model-viewer>
+  <div id="view"></div>
   <div class="controls" id="controls"></div>
   <div class="info" id="info"></div>
 </div>
-<script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { computeLayout, layoutOptions, minDoors } from "./layout.js";
+
 const EN = new URLSearchParams(location.search).get("lang") === "en";
 const T = EN ? {
-  width: "Width (mm)", top: "Top panel", layout: "Doors", door: "Door",
+  width: "Width", height: "Height", top: "Top panel", layout: "Doors", door: "Door",
   tops: { inset: "Between the sides", onset: "Covering the sides", none: "None (sink)" },
-  layouts: { default: "Single doors", pair: "With a double door" },
+  layouts: { single: "All single doors", pair: "Double doors", left: "Single door on the left", right: "Single door on the right" },
   doorState: { closed: "Closed", open: "Open" },
-  info: m => `<b>${m.doors}</b> doors · <b>${m.hinges}</b> hinges each · <b>${m.walls}</b> inner walls · <b>${m.shelves}</b> shelves · <b>${m.legs}</b> legs`,
-  note: "Height 850 · depth 600 mm. Every option is computed from the same parametric model and its company rules.",
-  updated: (d, r) => `Latest version: ${d}${r ? " (" + r + ")" : ""}`
+  info: (L) => `<b>${L.n}</b> doors · <b>${L.nh}</b> hinges each · <b>${L.dividers.length}</b> inner walls · <b>${L.nShelves * L.bays.length}</b> shelves · <b>${L.legs.length}</b> legs`,
+  note: "Depth 600 mm. Doors, hinges, walls, shelves and legs follow the design rules of one parametric model.",
+  updated: (d, r) => `Latest version: ${d}${r ? " (" + r + ")" : ""}`,
 } : {
-  width: "폭 (mm)", top: "상판", layout: "문 배치", door: "문",
+  width: "폭", height: "높이", top: "상판", layout: "문 배치", door: "문",
   tops: { inset: "측판 사이", onset: "위를 덮음", none: "없음 (싱크대)" },
-  layouts: { default: "한쪽문", pair: "양문 포함" },
+  layouts: { single: "모두 단일 도어", pair: "양문", left: "왼쪽 단일 도어", right: "오른쪽 단일 도어" },
   doorState: { closed: "닫힘", open: "열림" },
-  info: m => `문 <b>${m.doors}</b>짝 · 문마다 힌지 <b>${m.hinges}</b>개 · 칸막이 <b>${m.walls}</b>개 · 선반 <b>${m.shelves}</b>개 · 다릿발 <b>${m.legs}</b>개`,
-  note: "높이 850 · 깊이 600mm. 모든 조합은 같은 파라메트릭 모델과 회사 규칙으로 계산했습니다.",
-  updated: (d, r) => `최신 버전: ${d}${r ? " (" + r + ")" : ""}`
+  info: (L) => `문 <b>${L.n}</b>짝 · 문마다 힌지 <b>${L.nh}</b>개 · 칸막이 <b>${L.dividers.length}</b>개 · 선반 <b>${L.nShelves * L.bays.length}</b>개 · 다릿발 <b>${L.legs.length}</b>개`,
+  note: "깊이 600mm. 문, 힌지, 칸막이, 선반, 다릿발은 하나의 파라메트릭 모델에 정해 둔 설계 규칙에 따라 바뀝니다.",
+  updated: (d, r) => `최신 버전: ${d}${r ? " (" + r + ")" : ""}`,
 };
-const state = { w: 1500, top: "onset", layout: "pair", door: "closed" };
-let manifest = null;
 
+const state = { W: 1500, H: 850, D: 600, top: "onset", layout: "left", open: false };
+let version = {};
+
+// ---------- three.js scene ----------
+const view = document.getElementById("view");
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+view.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 50);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.49;
+const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+sun.position.set(-1.5, 3, 2.5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -2, right: 2, top: 2.5, bottom: -2, near: 0.1, far: 10 });
+scene.add(sun);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.ShadowMaterial({ opacity: 0.22 }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// materials
+function oakCanvas(size = 512) {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const ctx = c.getContext("2d");
+  const img = ctx.createImageData(size, size);
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const ph = [rnd(), rnd()];
+  const raw = Array.from({ length: size + 2 }, () => rnd() * 2 - 1);
+  const streak = new Float32Array(size);
+  for (let i = 0; i < size; i++) streak[i] = ((raw[i] + raw[i + 1] + raw[i + 2]) / 3) * 1.7;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const u = x / size, v = y / size;
+    const wander = 0.005 * Math.sin(2 * Math.PI * (0.9 * v + 2.3 * u + ph[0])) + 0.003 * Math.sin(2 * Math.PI * (2.1 * v - 4.1 * u + ph[1]));
+    const bands = 0.5 + 0.5 * Math.sin(2 * Math.PI * (u + wander) * 11 + 1.5 * Math.sin(2 * Math.PI * u * 2));
+    const s = streak[(x + Math.round(wander * size) + size) % size];
+    const t = Math.min(1, Math.max(0, 0.55 + 0.18 * (bands - 0.5) + 0.07 * s));
+    const i = (y * size + x) * 4;
+    img.data[i] = 176 + 38 * t; img.data[i + 1] = 138 + 44 * t; img.data[i + 2] = 94 + 44 * t; img.data[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return c;
+}
+const oakSrc = oakCanvas();
+const M = {
+  body: new THREE.MeshStandardMaterial({ color: 0xece5d6, roughness: 0.6 }),
+  leg: new THREE.MeshStandardMaterial({ color: 0x1e1e20, roughness: 0.4, metalness: 0.6 }),
+  cup: new THREE.MeshStandardMaterial({ color: 0x9a9a9a, roughness: 0.5, metalness: 0.3 }),
+  line: new THREE.LineBasicMaterial({ color: 0x2a2a2a }),
+};
+function oakMaterial(w, h) {
+  const t = new THREE.CanvasTexture(oakSrc);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(w / 600, h / 600);
+  return new THREE.MeshStandardMaterial({ map: t, roughness: 0.6 });
+}
+
+let group = null;
+const S = 0.001; // mm -> m
+// cabinet coords (x right, y depth with the front at y<0, z up) -> three.js (x, z, -y)
+function box(parent, mat, x, y, z, dx, dy, dz) {
+  const geo = new THREE.BoxGeometry(dx * S, dz * S, dy * S);
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set((x + dx / 2) * S, (z + dz / 2) * S, -(y + dy / 2) * S);
+  m.castShadow = m.receiveShadow = true;
+  parent.add(m);
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo), M.line);
+  e.position.copy(m.position);
+  parent.add(e);
+  return m;
+}
+
+function build() {
+  const n = minDoors(state.W);
+  const opts = layoutOptions(n);
+  if (!opts.find((o) => o.key === state.layout)) state.layout = "single";
+  const groups = opts.find((o) => o.key === state.layout).groups;
+  const L = computeLayout({ W: state.W, H: state.H, D: state.D, top_mode: state.top, door_layout: groups });
+  const p = L.p, t = p.t;
+  if (group) {
+    scene.remove(group);
+    group.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map) { o.material.map.dispose(); o.material.dispose(); } });
+  }
+  group = new THREE.Group();
+  const bodyD = L.Dc - p.back_t;
+  const sideH = state.top === "onset" ? L.Hc - t : L.Hc;
+  box(group, M.body, 0, 0, L.z0, t, bodyD, sideH);
+  box(group, M.body, p.W - t, 0, L.z0, t, bodyD, sideH);
+  box(group, M.body, t, 0, L.z0, p.W - 2 * t, bodyD, t);
+  if (state.top === "inset") box(group, M.body, t, 0, L.z0 + L.Hc - t, p.W - 2 * t, bodyD, t);
+  if (state.top === "onset") box(group, M.body, 0, 0, L.z0 + L.Hc - t, p.W, bodyD, t);
+  box(group, M.body, 0, L.Dc - p.back_t, L.z0, p.W, p.back_t, L.Hc);
+  for (const [x0, x1] of L.dividers) box(group, M.body, x0, 0, L.innerBottom, x1 - x0, L.innerBack, L.clearH);
+  for (const [x0, x1] of L.bays) for (const zb of L.shelfZ)
+    box(group, M.body, x0 + p.shelf_clear, 0, zb, x1 - x0 - 2 * p.shelf_clear, L.innerBack, p.shelf_t);
+  for (const [x, y] of L.legs) {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(p.leg_d / 2 * S, p.leg_d / 2 * S, p.leg_h * S, 24), M.leg);
+    c.position.set(x * S, p.leg_h / 2 * S, -y * S);
+    c.castShadow = true;
+    group.add(c);
+  }
+  // doors turn on their hinge edge (at the door's back face)
+  for (const d of L.doors) {
+    const left = d.side === "left";
+    const px = left ? d.x : d.x + d.w;
+    const pivot = new THREE.Group();
+    pivot.position.set(px * S, 0, p.gap * S);
+    const inner = new THREE.Group();
+    inner.position.set(-px * S, 0, -p.gap * S);
+    box(inner, oakMaterial(d.w, d.h), d.x, -p.gap - p.door_t, d.z, d.w, p.door_t, d.h);
+    const cx = left ? d.x + p.cup_x : d.x + d.w - p.cup_x;
+    for (const z of d.hingeZ) {
+      const cup = new THREE.Mesh(new THREE.CylinderGeometry(p.cup_d / 2 * S, p.cup_d / 2 * S, 0.6 * S, 28), M.cup);
+      cup.rotation.x = Math.PI / 2;
+      cup.position.set(cx * S, z * S, (p.gap - 0.2) * S);
+      inner.add(cup);
+    }
+    pivot.add(inner);
+    pivot.rotation.y = state.open ? ((left ? -95 : 95) * Math.PI) / 180 : 0;
+    group.add(pivot);
+  }
+  group.position.x = (-p.W / 2) * S;
+  group.position.z = (-L.Dc / 2) * -S;
+  scene.add(group);
+  return L;
+}
+
+let framed = false;
+function frame() {
+  controls.target.set(0, (state.H / 2) * S, 0);
+  if (!framed) {
+    const size = Math.max(state.W, state.H) * S;
+    const dist = size * 2.6 + 0.6;
+    camera.position.set(-dist * 0.45, state.H * S * 0.75 + dist * 0.35, dist * 0.82);
+    framed = true;
+  }
+  controls.update();
+}
+
+function resize() {
+  const r = view.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / Math.max(r.height, 1);
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(view);
+
+(function loop() {
+  requestAnimationFrame(loop);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+
+// ---------- controls ----------
 function seg(title, key, options) {
   const g = document.createElement("div");
   g.className = "group";
   g.innerHTML = `<span class="label">${title}</span><div class="seg"></div>`;
-  const box = g.querySelector(".seg");
+  const boxEl = g.querySelector(".seg");
   options.forEach(([value, text]) => {
     const b = document.createElement("button");
     b.type = "button";
     b.textContent = text;
     b.setAttribute("aria-pressed", String(state[key] === value));
-    b.addEventListener("click", () => { state[key] = value; render(); });
-    box.appendChild(b);
+    b.addEventListener("click", () => { state[key] = value; update(); });
+    boxEl.appendChild(b);
   });
   return g;
 }
-
-function render() {
-  const c = document.getElementById("controls");
-  c.innerHTML = "";
-  c.appendChild(seg(T.width, "w", manifest.widths.map(w => [w, String(w)])));
-  c.appendChild(seg(T.top, "top", manifest.tops.map(t => [t, T.tops[t]])));
-  c.appendChild(seg(T.layout, "layout", manifest.layouts.map(l => [l, T.layouts[l]])));
-  c.appendChild(seg(T.door, "door", [["closed", T.doorState.closed], ["open", T.doorState.open]]));
-  const key = `w${state.w}_${state.top}_${state.layout}_${state.door}`;
-  const m = manifest.models[key];
-  const mv = document.getElementById("mv");
-  const src = m.file + "?v=" + (manifest.rev || "");
-  if (mv.getAttribute("src") !== src) mv.setAttribute("src", src);
-  document.getElementById("info").innerHTML = T.info(m) + "<br>" + T.note + "<br>" + T.updated(manifest.updated || "", manifest.rev || "");
+function slider(title, key, min, max, step) {
+  const g = document.createElement("div");
+  g.className = "group";
+  g.innerHTML = `<span class="label">${title}<span>${state[key]} mm</span></span><input type="range" min="${min}" max="${max}" step="${step}" value="${state[key]}">`;
+  const input = g.querySelector("input"), out = g.querySelector(".label span");
+  input.addEventListener("input", () => { state[key] = +input.value; out.textContent = `${state[key]} mm`; update(false); });
+  return g;
 }
 
-fetch("models/manifest.json", { cache: "no-store" }).then(r => r.json()).then(j => { manifest = j; render(); });
+let shownDoors = -1;
+function controlsFor(L) {
+  const c = document.getElementById("controls");
+  c.innerHTML = "";
+  c.appendChild(slider(T.width, "W", 450, 1800, 10));
+  c.appendChild(slider(T.height, "H", 600, 2000, 10));
+  c.appendChild(seg(T.top, "top", ["inset", "onset", "none"].map((k) => [k, T.tops[k]])));
+  const lay = seg(T.layout, "layout", layoutOptions(L.n).map((o) => [o.key, T.layouts[o.key]]));
+  lay.id = "layoutGroup";
+  c.appendChild(lay);
+  c.appendChild(seg(T.door, "open", [[false, T.doorState.closed], [true, T.doorState.open]]));
+  shownDoors = L.n;
+}
+
+function update(redrawControls = true) {
+  const L = build();
+  frame();
+  if (redrawControls) controlsFor(L);
+  else if (L.n !== shownDoors) {
+    // door count changed while dragging: refresh only the door-arrangement buttons
+    const old = document.getElementById("layoutGroup");
+    const lay = seg(T.layout, "layout", layoutOptions(L.n).map((o) => [o.key, T.layouts[o.key]]));
+    lay.id = "layoutGroup";
+    old.replaceWith(lay);
+    shownDoors = L.n;
+  }
+  document.getElementById("info").innerHTML = T.info(L) + "<br>" + T.note +
+    (version.updated ? "<br>" + T.updated(version.updated, version.rev) : "");
+}
+
+resize();
+fetch("version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
+  .then((v) => { version = v || {}; update(); });
 </script>
 </body>
 </html>
