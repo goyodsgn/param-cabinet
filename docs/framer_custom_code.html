@@ -72,8 +72,6 @@ function paper(){
   [].slice.call(c.querySelectorAll('p')).forEach(function(p){
     var em=p.querySelector('em'); if(em&&em.textContent.trim()===p.textContent.trim()&&/^(그림|Figure|표|Table)\s*\d/.test(p.textContent.trim())) p.classList.add('jk-caption');
   });
-  // back link → research list
-  var back=q('Back to Lab'); if(back){var a=back.closest('a')||back.querySelector('a'); var txt=back.querySelector('p')||back; txt.textContent=T('‹ Research 목록으로','‹ Back to Research'); if(a) a.setAttribute('href',pre()+'/research');}
   if(location.hash){var h=document.getElementById(location.hash.slice(1)); if(h) setTimeout(function(){h.scrollIntoView();},300);}
 }
 
@@ -146,19 +144,10 @@ function openSearch(term){
 function closeSearch(){if(ov) ov.classList.remove('open');}
 document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openSearch('');}});
 
-/* ---------- nav: Research link + search button ---------- */
+/* ---------- nav: search button ---------- */
 function nav(){
   var lab=q('Lab link'); if(!lab||!lab.parentElement) return;
   var bar=lab.parentElement;
-  if(!bar.querySelector('.jk-research')){
-    var r=lab.cloneNode(true); r.classList.add('jk-research'); r.removeAttribute('data-framer-name');
-    var a=r.querySelector('a')||(r.tagName==='A'?r:null); if(a){a.setAttribute('href',pre()+'/research'); a.removeAttribute('data-framer-page-link-current');}
-    var txt=r.querySelector('p')||r; txt.textContent='Research';
-    var on=/\/research\/?$/.test(location.pathname); var labOn=lab.querySelector('[data-framer-page-link-current]');
-    [].slice.call(r.querySelectorAll('*')).forEach(function(e){e.style&&e.style.removeProperty('--framer-text-color');});
-    if(on&&labOn){/* keep cloned active styling */}
-    lab.parentElement.insertBefore(r,lab.nextSibling);
-  }
   if(!bar.querySelector('.jk-search-btn')){
     var b=document.createElement('div'); b.className='jk-search-btn'; b.setAttribute('role','button'); b.setAttribute('aria-label','Search');
     b.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
