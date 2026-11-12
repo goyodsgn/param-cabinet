@@ -1,0 +1,126 @@
+<h2>Abstract</h2>
+<p>In interior design and custom furniture, every order comes with different dimensions, so drawings and 3D models are usually redrawn each time. To remove this repetitive work, I introduced parametric models that rebuild the shape by rule when the dimensions change, which cleared the bottleneck of redrawing every order. The parametric model itself, however, still has to be built by hand, rule by rule, and this becomes a bottleneck again whenever a new product type is added. This project tests whether an AI can build a parametric CAD model of a kitchen base cabinet from a single customer sentence. All 22 generated models followed the rules at the size the customer asked for, and 98% of 638 checks passed after resizing each model 30 times. The failing 2% was one hinge-side error that appears only when a cabinet has three doors, an error that cannot be found by checking only the requested size.</p>
+<p><strong>Tools:</strong> Python, CadQuery, Claude API, GitHub Actions (automated runs)</p>
+<p><strong>Code and results:</strong> <a href="https://github.com/goyodsgn/param-cabinet">github.com/goyodsgn/param-cabinet</a></p>
+<p><strong>Role:</strong> Problem definition, cabinet design rules, experiment design, review of results. Code written together with an AI coding tool</p>
+<h4>Contents</h4>
+<ol><li><p>Introduction</p></li><li><p>Related work</p></li><li><p>Method</p></li><li><p>Results</p></li><li><p>Discussion</p></li><li><p>Conclusion and future work</p></li></ol>
+<h2>1. Introduction</h2>
+<h3>1.1 Problem</h3>
+<p>Kitchen furniture is sized to the space it is installed in. Even the same base cabinet has a different width, height and depth for every order, so drawings and 3D models are usually redrawn whenever an order comes in. To cut this repetition, I started designing furniture as parametric models: entering the dimensions produces the shape, which removed the bottleneck of redrawing every order.</p>
+<blockquote><p><strong>What is a parametric model:</strong> A 3D model that rebuilds itself by fixed rules when its dimensions (parameters) change. For example, making a base cabinet wider also adds doors.</p></blockquote>
+<p>The remaining bottleneck is building the parametric model in the first place. A single base cabinet has many rules for door count, hinge position, dividers, shelves and legs, and these rules depend on each other. A change in width changes the number of doors, and a change in door count changes the dividers and hinge sides. I have to define each of these relationships by hand and start over for every new product type. If an AI could do this step, the second bottleneck would shrink as well.</p>
+<h3>1.2 Research questions</h3>
+<p>To use an AI-made model as a parametric model in practice, three things need to hold.</p>
+<ul><li><p><strong>RQ1.</strong> However a customer phrases the request, does the AI read the dimensions correctly and build the model by the rules?</p></li><li><p><strong>RQ2.</strong> When a customer request conflicts with a manufacturing rule, does the AI resolve it in the defined order of priority?</p></li><li><p><strong>RQ3.</strong> Does the model still follow the rules when other sizes are put into it?</p></li></ul>
+<p>RQ3 is the core of this project. A parametric model is built to be resized later, so a model that is correct only at the first requested size is not usable.</p>
+<h2>2. Related work</h2>
+<p>AI that turns text into 3D shapes falls into two broad groups. Mesh-generation AI produces shapes made of surface pieces (meshes), which cannot be used for physical production. CAD-code-generation AI (text-to-CAD) produces code that can be manufactured, but it is mostly evaluated on whether a single shape matches its description. Neither asks whether the rules still hold after resizing. This project uses CAD code generation for physical production and changes the evaluation criterion to that question.</p>
+<table><tr><th><p>Aspect</p></th><th><p>Mesh-generation AI</p></th><th><p>CAD-code-generation AI (text-to-CAD)</p></th><th><p>This project</p></th></tr>
+<tr><td><p>Output</p></td><td><p>3D shape made of surface pieces (mesh)</p></td><td><p>CAD code and solid geometry</p></td><td><p>CAD code and solid geometry (CadQuery)</p></td></tr>
+<tr><td><p>Changing dimensions</p></td><td><p>Not possible; the whole shape is regenerated</p></td><td><p>Possible by editing numbers in the code</p></td><td><p>Possible by editing numbers in the code</p></td></tr>
+<tr><td><p>Main use</p></td><td><p>Visualization, game assets</p></td><td><p>Single-part modeling</p></td><td><p>Parametric models for a product family</p></td></tr>
+<tr><td><p>Physical production</p></td><td><p>Not possible</p></td><td><p>Possible</p></td><td><p>Possible</p></td></tr>
+<tr><td><p>Evaluation</p></td><td><p>Shape quality</p></td><td><p>Does it look as described (1 shape)</p></td><td><p>Do the rules hold after resizing (30 shapes)</p></td></tr>
+<tr><td><p>Company rules</p></td><td><p>Not applicable</p></td><td><p>Mostly generic shapes</p></td><td><p>Priority between company rules and customer requests</p></td></tr></table>
+<h2>3. Method</h2>
+<h3>3.1 Subject: the base cabinet and its design rules</h3>
+<p>The subject is a kitchen base cabinet. Its doors, hinges, dividers and shelves change with size, and its outer form is simple, which makes it a good test of how well the parametric logic is implemented. The inputs are width (W), height (H) and depth (D), the final overall dimensions including doors and legs.</p>
+<p>Terms used in the table:</p>
+<ul><li><p><strong>Onset / inset:</strong> A panel laid over the edges of other panels is onset; a panel fitted between them is inset.</p></li><li><p><strong>Door gap:</strong> The clearance between a door and the carcass, and between doors, so that doors do not hit each other given installation tolerances.</p></li><li><p><strong>Shelf pin:</strong> A small pin that supports a shelf, inserted into holes drilled in the side or divider panel.</p></li><li><p><strong>Inner wall:</strong> A vertical divider that splits the space behind the doors.</p></li></ul>
+<table><tr><th><p>Area</p></th><th><p>Rule (default)</p></th><th><p>Can the customer change it?</p></th></tr>
+<tr><td><p>Carcass</p></td><td><p>Side panels run the full height; top and bottom fit between them (18 mm panels)</p></td><td><p>Thickness can change</p></td></tr>
+<tr><td><p>Back panel</p></td><td><p>Onset over the back of all four panels, or inset between them (default onset, 10 mm)</p></td><td><p>Yes</p></td></tr>
+<tr><td><p>Door count</p></td><td><p>Width divided by 600 mm, rounded up: 2 doors at 1200, 3 at 1500</p></td><td><p>Only more (a door over 600 mm is <strong>not allowed</strong>)</p></td></tr>
+<tr><td><p>Door gap</p></td><td><p>Each door cut 2 mm smaller on every side and set 2 mm off the carcass (4 mm between doors)</p></td><td><p><strong>No</strong></p></td></tr>
+<tr><td><p>Door direction</p></td><td><p>Pairs that open toward each other; with an odd count the last door hinges on the right</p></td><td><p>Yes</p></td></tr>
+<tr><td><p>Hinges</p></td><td><p>2 for door height up to 900 mm, 3 up to 1600 mm, 4 above. 35 mm cup</p></td><td><p><strong>No</strong></p></td></tr>
+<tr><td><p>Inner walls</p></td><td><p>One vertical wall at every joint between doors (18 mm)</p></td><td><p>Follows door count</p></td></tr>
+<tr><td><p>Shelves</p></td><td><p>As many as keep every space at least 320 mm high, evenly spaced (30 mm)</p></td><td><p>Count can be set</p></td></tr>
+<tr><td><p>Shelf pins</p></td><td><p>2 per shelf side (front and back), one more in the middle if the spacing exceeds 500 mm. 8 mm deep holes in the vertical panels</p></td><td><p><strong>No</strong></p></td></tr>
+<tr><td><p>Legs</p></td><td><p>At the four corners with a 30 mm margin, extra legs where spacing exceeds 600 mm (100 mm high)</p></td><td><p>Height yes, spacing <strong>no</strong></p></td></tr></table>
+<p>The rules have priorities. "No" in the table marks an <strong>absolute rule</strong> that must hold because of hinge load or manufacturing tolerance. It is kept even when the customer asks otherwise, and the reason is left as a note. Everything else is a company default that the customer can override by asking explicitly.</p>
+<h3>3.2 Tools</h3>
+<p>The CAD tool is <strong>CadQuery</strong>, an open-source CAD library that builds 3D shapes from Python code and exports STEP files that standard CAD software can open. Changing the numbers at the top of the code (width, height, depth and so on) and running it again rebuilds the shape. The code itself plays the role of the feature tree in a regular CAD program.</p>
+<h3>3.3 Procedure</h3>
+<p>Instead of checking the AI's models by eye, each one is compared automatically with a reference model.</p>
+<img src="https://raw.githubusercontent.com/goyodsgn/param-cabinet/main/figures/flow.png" alt="Experiment flow: customer request, AI writes code, run, grade, resize test">
+<p><em>Figure 1. Experiment flow. The key step is re-grading the generated model at many sizes.</em></p>
+<ol><li><p><strong>Build a reference model:</strong> A reference (answer) model with every cabinet rule was built first. Given a size, it computes how many doors and hinges are correct.</p></li><li><p><strong>Ask the AI:</strong> The AI (Claude Sonnet 5.5) receives the company rule document and the customer sentence and writes CadQuery code.</p></li><li><p><strong>Grade:</strong> The AI's code is actually run to produce the 3D shape, which is compared with the reference model on the 12 items below.</p></li><li><p><strong>Resize and grade again:</strong> The same code is run with 30 different sizes and graded each time. This checks that the model does not break when the customer later changes the dimensions.</p></li></ol>
+<p>The whole process runs automatically on GitHub Actions. Pushing code triggers generation, grading and preview images on the server.</p>
+<h3>3.4 Evaluation</h3>
+<p>Each AI model is compared with the reference model on the 12 items below. Any difference counts as a failure.</p>
+<table><tr><th><p>Group</p></th><th><p>Items</p></th></tr>
+<tr><td><p>Geometry</p></td><td><p>Overall size, 5 carcass parts, every part a valid solid</p></td></tr>
+<tr><td><p>Doors</p></td><td><p>Door count, door gap, hinge count, hinge side</p></td></tr>
+<tr><td><p>Interior</p></td><td><p>Inner wall count, shelf count, shelf pin count</p></td></tr>
+<tr><td><p>Base</p></td><td><p>Leg count</p></td></tr>
+<tr><td><p>Priority</p></td><td><p>No absolute rule broken</p></td></tr></table>
+<h2>4. Results</h2>
+<h3>4.1 Reading dimensions (RQ1) → all 10 passed</h3>
+<p>Customers describe the same cabinet in different ways. Ten sentences mixing units (mm, m, cm) and phrasing were given as they are, to check that the AI reads the dimensions correctly and builds by the rules. The sentences were given in Korean and are translated here.</p>
+<table><tr><th><p>#</p></th><th><p>Customer sentence</p></th><th><p>Dimensions read by the AI (W × H × D, legs)</p></th></tr>
+<tr><td><p>1</p></td><td><p>"A base cabinet, width 1200, height 850, depth 580. 18 mm panels, hinged doors."</p></td><td><p>1200 × 850 × 580, legs 100</p></td></tr>
+<tr><td><p>2</p></td><td><p>"Make me a small base cabinet, 600 across and 700 tall. Depth 560."</p></td><td><p>600 × 700 × 560, legs 100</p></td></tr>
+<tr><td><p>3</p></td><td><p>"A cabinet to go under the sink, width 900, height 820, depth 600, leg height 150."</p></td><td><p>900 × 820 × 600, legs 150</p></td></tr>
+<tr><td><p>4</p></td><td><p>"A 1.5-meter-wide base cabinet. Height 850, depth 600."</p></td><td><p>1500 × 850 × 600, legs 100</p></td></tr>
+<tr><td><p>5</p></td><td><p>"I need a base cabinet, width 1800mm, height 1000mm, depth 650mm."</p></td><td><p>1800 × 1000 × 650, legs 100</p></td></tr>
+<tr><td><p>6</p></td><td><p>"A big storage cabinet, 2.4m across, 1.7m tall, 90cm deep. Legs 120."</p></td><td><p>2400 × 1700 × 900, legs 120</p></td></tr>
+<tr><td><p>7</p></td><td><p>"W=750, H=720, D=550 base cabinet"</p></td><td><p>750 × 720 × 550, legs 100</p></td></tr>
+<tr><td><p>8</p></td><td><p>"A base cabinet for under the counter. Width 1100, height 870. Default depth."</p></td><td><p>1100 × 870 × 580 (default), legs 100</p></td></tr>
+<tr><td><p>9</p></td><td><p>"Island base cabinet, width 3000, height 850, depth 600, legs 100."</p></td><td><p>3000 × 850 × 600, legs 100</p></td></tr>
+<tr><td><p>10</p></td><td><p>"A tall cabinet, height 1650, width 1200, depth 500. Legs 80mm."</p></td><td><p>1200 × 1650 × 500, legs 80</p></td></tr></table>
+<p>All 10 dimensions were read correctly, and values that were not mentioned (depth, leg height and so on) were filled with company defaults. All 12 grading items passed. The AI's code gathers 27 to 29 dimension and rule values at the top, and computes values such as the door count with formulas so that they change with the size.</p>
+<p>Detailed results: <a href="https://github.com/goyodsgn/param-cabinet/blob/main/results/step3.md">results/step3.md</a> · Generated code: <a href="https://github.com/goyodsgn/param-cabinet/tree/main/generated">generated/</a></p>
+<p>The same model with only the size changed. Doors, hinges, inner walls, shelves, shelf pins and legs change automatically with the size.</p>
+<table><tr><th><p>Size (W × H × D, mm)</p></th><th><p>Doors</p></th><th><p>Hinges per door</p></th><th><p>Inner walls</p></th><th><p>Shelves per bay</p></th><th><p>Pins per shelf side</p></th></tr>
+<tr><td><p>1200 × 850 × 580</p></td><td><p>2</p></td><td><p>2</p></td><td><p>1</p></td><td><p>1</p></td><td><p>2</p></td></tr>
+<tr><td><p>2400 × 1700 × 900</p></td><td><p>4</p></td><td><p>3</p></td><td><p>3</p></td><td><p>3</p></td><td><p>3</p></td></tr></table>
+<img src="https://raw.githubusercontent.com/goyodsgn/param-cabinet/main/previews/cabinet_1200x850x580_onset.png" alt="Base cabinet, width 1200, height 850, depth 580">
+<img src="https://raw.githubusercontent.com/goyodsgn/param-cabinet/main/previews/cabinet_2400x1700x900_onset.png" alt="Base cabinet, width 2400, height 1700, depth 900">
+<p><em>Figure 2. Generated examples. Top left 3D view, top right front (circles = hinge positions), bottom left interior with doors removed, bottom right side (red dots = shelf pins).</em></p>
+<h3>4.2 Conflicts between requests and rules (RQ2) → all 12 passed</h3>
+<p>Real customers ask for more than dimensions. Some requests can be granted and some cannot, for manufacturing reasons. Twelve sentences mixing both kinds were tested.</p>
+<ul><li><p><strong>7 requests that can be granted:</strong> All built as the customer asked.</p></li><li><p><strong>5 requests that conflict with absolute rules:</strong> All kept the rule and left a note, written for the customer, explaining why.</p></li></ul>
+<table><tr><th><p>Type</p></th><th><p>Customer sentence</p></th><th><p>What the AI built</p></th></tr>
+<tr><td><p>Customer first</p></td><td><p>"Base cabinet 1200 wide, 850 tall, 580 deep, with 3 doors."</p></td><td><p>3 doors (default 2), inner walls increased to 2 accordingly</p></td></tr>
+<tr><td><p>Customer first</p></td><td><p>"Width 900, height 850, depth 600, no shelves."</p></td><td><p>0 shelves</p></td></tr>
+<tr><td><p>Customer first</p></td><td><p>"Width 1200, height 850, depth 580, inset back panel."</p></td><td><p>Inset back panel (default onset)</p></td></tr>
+<tr><td><p>Customer first</p></td><td><p>"Width 1500, height 850, depth 600, door thickness 18."</p></td><td><p>18 mm doors (default 22 mm)</p></td></tr>
+<tr><td><p>Customer first</p></td><td><p>"Width 1200, height 850, depth 580, but put in 3 shelves."</p></td><td><p>3 shelves, with a note that each space is about 156 mm, below the default 320 mm</p></td></tr>
+<tr><td><p>Customer first</p></td><td><p>"Width 1800, height 1000, depth 650, leg height 150, panel thickness 15."</p></td><td><p>150 mm legs, 15 mm panels</p></td></tr>
+<tr><td><p>Customer first</p></td><td><p>"Width 2400, height 850, depth 700, 6 doors, 1 shelf, inset back."</p></td><td><p>All three requests applied</p></td></tr>
+<tr><td><p><strong>Absolute rule</strong></p></td><td><p>"Width 1800, height 850, depth 580, two doors is enough."</p></td><td><p>3 doors, with a note that a door cannot exceed 600 mm</p></td></tr>
+<tr><td><p><strong>Absolute rule</strong></p></td><td><p>"Width 1200, height 850, depth 580, doors fitted with no gap."</p></td><td><p>2 mm door gap kept, with a note that it is required for manufacturing tolerance</p></td></tr>
+<tr><td><p><strong>Absolute rule</strong></p></td><td><p>"Width 1200, height 850, depth 900, only 2 shelf pins per side."</p></td><td><p>3 per side, with a note that 2 would be 766 mm apart, over 500 mm</p></td></tr>
+<tr><td><p><strong>Absolute rule</strong></p></td><td><p>"Width 2400, height 850, depth 580, legs only at the four corners."</p></td><td><p>10 legs (5 across × 2 deep), with a note that leg spacing cannot exceed 600 mm</p></td></tr>
+<tr><td><p><strong>Absolute rule</strong></p></td><td><p>"Width 1200, height 1700, depth 580, only 2 hinges per door."</p></td><td><p>3 hinges, with a note that a 1596 mm door needs 3</p></td></tr></table>
+<p>Detailed results: <a href="https://github.com/goyodsgn/param-cabinet/blob/main/results/step3_priority.md">results/step3_priority.md</a> · Generated code: <a href="https://github.com/goyodsgn/param-cabinet/tree/main/generated_priority">generated_priority/</a></p>
+<p>Sections 4.1 and 4.2 show that with clear rules, the AI builds correctly at the size the customer asked for (RQ1, RQ2). So far, however, only one size per model has been checked.</p>
+<h3>4.3 Rules after resizing (RQ3) → 628 of 638 passed (98%)</h3>
+<p>The 22 models from 4.1 and 4.2 were each given 30 different sizes and graded every time.</p>
+<table><tr><th><p>Item</p></th><th><p>Details</p></th></tr>
+<tr><td><p>Size range</p></td><td><p>Width 400–3600 mm, height 500–2200 mm, depth 350–1000 mm, legs 50–200 mm</p></td></tr>
+<tr><td><p>Back panel</p></td><td><p>Onset and inset alternated</p></td></tr>
+<tr><td><p>Edge cases</p></td><td><p>6 included on purpose, such as width 601 mm (where it just becomes 2 doors) and door heights of exactly 900 mm and 1600 mm (where the hinge count changes)</p></td></tr>
+<tr><td><p>Grader check</p></td><td><p>The hand-written reference model passed all 30 runs of the same test, so the grading itself is sound</p></td></tr></table>
+<p>20 of the 22 models followed the rules at every size. The other 2 showed the same error.</p>
+<table><tr><th><p>Models</p></th><th><p>Count</p></th><th><p>Result</p></th></tr>
+<tr><td><p>Passed at every size</p></td><td><p>20</p></td><td><p>Rules held at any size</p></td></tr>
+<tr><td><p>Failed at some sizes</p></td><td><p>2</p></td><td><p>Each failed 5 of 30 runs, all from the same bug</p></td></tr></table>
+<img src="https://raw.githubusercontent.com/goyodsgn/param-cabinet/main/figures/hinge_bug.png" alt="Hinge-side error on the last of three doors">
+<p><em>Figure 3. The error found by the resize test. With three doors, the last door's hinge side came out reversed.</em></p>
+<p>With three doors, the rule says the last door hinges on the right, but these two models hinged it on the left. Built as is, the hinge holes would be drilled on the wrong side and the door would have to be made again.</p>
+<p>Both models passed in 4.2. At the sizes the customers asked for (width 1200 and 2400), the door count was even. The error appeared once the width was changed to between 1200 and 1800 mm and the cabinet got three doors. It cannot be found by checking only the requested size.</p>
+<p>Detailed results: <a href="https://github.com/goyodsgn/param-cabinet/blob/main/results/step4.md">results/step4.md</a></p>
+<h2>5. Discussion</h2>
+<h3>5.1 Findings</h3>
+<ul><li><p>Given clear rules, the AI follows them well even when there are many rules and mixed customer requests.</p></li><li><p>A parametric model has to be verified across sizes. It can be right at one size and wrong at another.</p></li><li><p>Splitting the rules into "what the customer can change" and "what manufacturing cannot change" lets the AI reflect customer requests while keeping manufacturing constraints.</p></li></ul>
+<h3>5.2 Limitations</h3>
+<ul><li><p>The rules were given already written as formulas. In practice, rules are often not documented and exist only as the maker's know-how.</p></li><li><p>The subject is a single type of base cabinet; drawers and handles were not included.</p></li></ul>
+<h2>6. Conclusion and future work</h2>
+<p>With clearly organized rules, the AI built resizable parametric base cabinet models from a single customer sentence at a 98% level. It also showed that checking a single size is not enough to judge whether a model is correct. Next steps:</p>
+<h3>6.1 Completing this experiment</h3>
+<ol><li><p><strong>Automatic repair:</strong> Feed the failing cases back to the AI to fix, and see whether 98% can reach 100%.</p></li><li><p><strong>Web demo:</strong> Add sliders to the generated model so that dimensions can be changed and the shape seen directly on the web.</p></li><li><p><strong>Rules in plain words only:</strong> Give the rules the way a practitioner would say them instead of as formulas, shuffle their order, and measure how much accuracy drops.</p></li></ol>
+<h3>6.2 Extending the scope</h3>
+<ol><li><p><strong>Research direction:</strong> Have the AI look at several models that differ only in size and work out on its own which dimensions are parameters and how they relate.</p></li><li><p><strong>Load check:</strong> Use the generated part structure and material data to check whether furniture or stairs can bear the expected load.</p></li><li><p><strong>Code compliance check:</strong> Check whether the generated design meets building codes and related regulations.</p></li></ol>
