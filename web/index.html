@@ -3,7 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Parametric cabinet 3D</title>
+<title>AI 파라메트릭 하부장 3D | Parametric Cabinet by Jeongyeon Kim</title>
+<meta name="description" content="폭·높이·상판·문 배치를 바꾸면 설계 규칙에 따라 문, 힌지, 칸막이, 선반, 다릿발이 바뀌는 파라메트릭 하부장 3D. AI(Claude)와 CadQuery로 만드는 김정연(Jeongyeon Kim)의 연구 결과물입니다.">
+<meta name="author" content="Jeongyeon Kim (김정연)">
+<link rel="canonical" href="https://goyodsgn.github.io/param-cabinet/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AI 파라메트릭 하부장 3D — Jeongyeon Kim">
+<meta property="og:description" content="Change the size and door arrangement; doors, hinges, shelves and legs follow the design rules of one parametric model.">
+<meta property="og:image" content="https://goyodsgn.github.io/param-cabinet/thumbnail.png">
+<meta property="og:url" content="https://goyodsgn.github.io/param-cabinet/">
+<meta name="twitter:card" content="summary_large_image">
 <script type="importmap">
 { "imports": {
   "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
@@ -32,6 +41,8 @@
   .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
   .info { font-size: 13px; line-height: 1.6; border-top: 1px solid var(--line); padding-top: 8px; }
   .info b { font-weight: 600; }
+  .info a { color: var(--ink); text-decoration: underline; text-decoration-color: rgba(31,31,31,.3); text-underline-offset: 2px; }
+  .info a:hover { text-decoration-color: var(--ink); }
   /* Compact mode for small embeds: the 3D fills the frame, options open over it */
   #toggle { display: none; position: absolute; top: 10px; left: 10px; z-index: 3; font: inherit; font-size: 13px;
     color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; cursor: default; }
@@ -72,6 +83,7 @@ const T = EN ? {
   info: (L) => `<b>${L.n}</b> doors · <b>${L.nh}</b> hinges each · <b>${L.dividers.length}</b> inner walls · <b>${L.nShelves * L.bays.length}</b> shelves · <b>${L.legs.length}</b> legs`,
   note: "Depth 600 mm. Doors, hinges, walls, shelves and legs follow the design rules of one parametric model.",
   updated: (d, r) => `Latest version: ${d}${r ? " (" + r + ")" : ""}`,
+  credit: `<a href="https://jeongyeon.framer.website/en/project/ai-parametric-cabinet-live" target="_top">Jeongyeon Kim · AI parametric cabinet research</a>`,
 } : {
   width: "폭", height: "높이", top: "상판", layout: "문 배치", door: "문",
   tops: { inset: "측판 사이", onset: "위를 덮음", none: "없음 (싱크대)" },
@@ -80,6 +92,7 @@ const T = EN ? {
   info: (L) => `문 <b>${L.n}</b>짝 · 문마다 힌지 <b>${L.nh}</b>개 · 칸막이 <b>${L.dividers.length}</b>개 · 선반 <b>${L.nShelves * L.bays.length}</b>개 · 다릿발 <b>${L.legs.length}</b>개`,
   note: "깊이 600mm. 문, 힌지, 칸막이, 선반, 다릿발은 하나의 파라메트릭 모델에 정해 둔 설계 규칙에 따라 바뀝니다.",
   updated: (d, r) => `최신 버전: ${d}${r ? " (" + r + ")" : ""}`,
+  credit: `<a href="https://jeongyeon.framer.website/project/ai-parametric-cabinet-live" target="_top">김정연 · AI 파라메트릭 하부장 연구</a>`,
 };
 
 const state = { W: 1500, H: 850, D: 600, top: "onset", layout: "left", open: false };
@@ -301,7 +314,7 @@ function update(redrawControls = true) {
     shownDoors = L.n;
   }
   document.getElementById("info").innerHTML = T.info(L) + `<span class="note"><br>${T.note}</span>` +
-    (version.updated ? "<br>" + T.updated(version.updated, version.rev) : "");
+    (version.updated ? "<br>" + T.updated(version.updated, version.rev) + " · " : "<br>") + T.credit;
 }
 
 // small frame (e.g. an embed on the portfolio page): 3D fills it, options open over it
