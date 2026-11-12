@@ -1,0 +1,867 @@
+{
+ "H": 850.0,
+ "D": 600.0,
+ "widths": [
+  900,
+  1200,
+  1500,
+  1800
+ ],
+ "tops": [
+  "inset",
+  "onset",
+  "none"
+ ],
+ "layouts": [
+  "default",
+  "pair"
+ ],
+ "models": {
+  "w900_inset_default_closed": {
+   "file": "models/w900_inset_default_closed.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 6,
+   "bays": [
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 325
+  },
+  "w900_inset_default_open": {
+   "file": "models/w900_inset_default_open.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 6,
+   "bays": [
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 325
+  },
+  "w900_inset_pair_closed": {
+   "file": "models/w900_inset_pair_closed.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 0,
+   "shelves": 1,
+   "legs": 6,
+   "bays": [
+    2
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 308
+  },
+  "w900_inset_pair_open": {
+   "file": "models/w900_inset_pair_open.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 0,
+   "shelves": 1,
+   "legs": 6,
+   "bays": [
+    2
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 308
+  },
+  "w900_onset_default_closed": {
+   "file": "models/w900_onset_default_closed.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 6,
+   "bays": [
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 325
+  },
+  "w900_onset_default_open": {
+   "file": "models/w900_onset_default_open.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 6,
+   "bays": [
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 325
+  },
+  "w900_onset_pair_closed": {
+   "file": "models/w900_onset_pair_closed.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 0,
+   "shelves": 1,
+   "legs": 6,
+   "bays": [
+    2
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 308
+  },
+  "w900_onset_pair_open": {
+   "file": "models/w900_onset_pair_open.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 0,
+   "shelves": 1,
+   "legs": 6,
+   "bays": [
+    2
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 308
+  },
+  "w900_none_default_closed": {
+   "file": "models/w900_none_default_closed.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 6,
+   "bays": [
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 324
+  },
+  "w900_none_default_open": {
+   "file": "models/w900_none_default_open.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 6,
+   "bays": [
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 324
+  },
+  "w900_none_pair_closed": {
+   "file": "models/w900_none_pair_closed.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 0,
+   "shelves": 1,
+   "legs": 6,
+   "bays": [
+    2
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 307
+  },
+  "w900_none_pair_open": {
+   "file": "models/w900_none_pair_open.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 0,
+   "shelves": 1,
+   "legs": 6,
+   "bays": [
+    2
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 307
+  },
+  "w1200_inset_default_closed": {
+   "file": "models/w1200_inset_default_closed.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 6,
+   "bays": [
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 325
+  },
+  "w1200_inset_default_open": {
+   "file": "models/w1200_inset_default_open.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 6,
+   "bays": [
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 325
+  },
+  "w1200_inset_pair_closed": {
+   "file": "models/w1200_inset_pair_closed.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 0,
+   "shelves": 1,
+   "legs": 6,
+   "bays": [
+    2
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 308
+  },
+  "w1200_inset_pair_open": {
+   "file": "models/w1200_inset_pair_open.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 0,
+   "shelves": 1,
+   "legs": 6,
+   "bays": [
+    2
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 308
+  },
+  "w1200_onset_default_closed": {
+   "file": "models/w1200_onset_default_closed.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 6,
+   "bays": [
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 325
+  },
+  "w1200_onset_default_open": {
+   "file": "models/w1200_onset_default_open.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 6,
+   "bays": [
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 325
+  },
+  "w1200_onset_pair_closed": {
+   "file": "models/w1200_onset_pair_closed.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 0,
+   "shelves": 1,
+   "legs": 6,
+   "bays": [
+    2
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 308
+  },
+  "w1200_onset_pair_open": {
+   "file": "models/w1200_onset_pair_open.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 0,
+   "shelves": 1,
+   "legs": 6,
+   "bays": [
+    2
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 308
+  },
+  "w1200_none_default_closed": {
+   "file": "models/w1200_none_default_closed.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 6,
+   "bays": [
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 324
+  },
+  "w1200_none_default_open": {
+   "file": "models/w1200_none_default_open.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 6,
+   "bays": [
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 324
+  },
+  "w1200_none_pair_closed": {
+   "file": "models/w1200_none_pair_closed.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 0,
+   "shelves": 1,
+   "legs": 6,
+   "bays": [
+    2
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 307
+  },
+  "w1200_none_pair_open": {
+   "file": "models/w1200_none_pair_open.glb",
+   "doors": 2,
+   "hinges": 2,
+   "walls": 0,
+   "shelves": 1,
+   "legs": 6,
+   "bays": [
+    2
+   ],
+   "sides": [
+    "left",
+    "right"
+   ],
+   "kb": 307
+  },
+  "w1500_inset_default_closed": {
+   "file": "models/w1500_inset_default_closed.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 2,
+   "shelves": 3,
+   "legs": 8,
+   "bays": [
+    1,
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right",
+    "right"
+   ],
+   "kb": 374
+  },
+  "w1500_inset_default_open": {
+   "file": "models/w1500_inset_default_open.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 2,
+   "shelves": 3,
+   "legs": 8,
+   "bays": [
+    1,
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right",
+    "right"
+   ],
+   "kb": 374
+  },
+  "w1500_inset_pair_closed": {
+   "file": "models/w1500_inset_pair_closed.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 8,
+   "bays": [
+    1,
+    2
+   ],
+   "sides": [
+    "left",
+    "left",
+    "right"
+   ],
+   "kb": 357
+  },
+  "w1500_inset_pair_open": {
+   "file": "models/w1500_inset_pair_open.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 8,
+   "bays": [
+    1,
+    2
+   ],
+   "sides": [
+    "left",
+    "left",
+    "right"
+   ],
+   "kb": 357
+  },
+  "w1500_onset_default_closed": {
+   "file": "models/w1500_onset_default_closed.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 2,
+   "shelves": 3,
+   "legs": 8,
+   "bays": [
+    1,
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right",
+    "right"
+   ],
+   "kb": 374
+  },
+  "w1500_onset_default_open": {
+   "file": "models/w1500_onset_default_open.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 2,
+   "shelves": 3,
+   "legs": 8,
+   "bays": [
+    1,
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right",
+    "right"
+   ],
+   "kb": 374
+  },
+  "w1500_onset_pair_closed": {
+   "file": "models/w1500_onset_pair_closed.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 8,
+   "bays": [
+    1,
+    2
+   ],
+   "sides": [
+    "left",
+    "left",
+    "right"
+   ],
+   "kb": 357
+  },
+  "w1500_onset_pair_open": {
+   "file": "models/w1500_onset_pair_open.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 8,
+   "bays": [
+    1,
+    2
+   ],
+   "sides": [
+    "left",
+    "left",
+    "right"
+   ],
+   "kb": 357
+  },
+  "w1500_none_default_closed": {
+   "file": "models/w1500_none_default_closed.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 2,
+   "shelves": 3,
+   "legs": 8,
+   "bays": [
+    1,
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right",
+    "right"
+   ],
+   "kb": 373
+  },
+  "w1500_none_default_open": {
+   "file": "models/w1500_none_default_open.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 2,
+   "shelves": 3,
+   "legs": 8,
+   "bays": [
+    1,
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right",
+    "right"
+   ],
+   "kb": 373
+  },
+  "w1500_none_pair_closed": {
+   "file": "models/w1500_none_pair_closed.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 8,
+   "bays": [
+    1,
+    2
+   ],
+   "sides": [
+    "left",
+    "left",
+    "right"
+   ],
+   "kb": 356
+  },
+  "w1500_none_pair_open": {
+   "file": "models/w1500_none_pair_open.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 8,
+   "bays": [
+    1,
+    2
+   ],
+   "sides": [
+    "left",
+    "left",
+    "right"
+   ],
+   "kb": 356
+  },
+  "w1800_inset_default_closed": {
+   "file": "models/w1800_inset_default_closed.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 2,
+   "shelves": 3,
+   "legs": 8,
+   "bays": [
+    1,
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right",
+    "right"
+   ],
+   "kb": 374
+  },
+  "w1800_inset_default_open": {
+   "file": "models/w1800_inset_default_open.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 2,
+   "shelves": 3,
+   "legs": 8,
+   "bays": [
+    1,
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right",
+    "right"
+   ],
+   "kb": 374
+  },
+  "w1800_inset_pair_closed": {
+   "file": "models/w1800_inset_pair_closed.glb",
+   "doors": 4,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 8,
+   "bays": [
+    2,
+    2
+   ],
+   "sides": [
+    "left",
+    "right",
+    "left",
+    "right"
+   ],
+   "kb": 381
+  },
+  "w1800_inset_pair_open": {
+   "file": "models/w1800_inset_pair_open.glb",
+   "doors": 4,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 8,
+   "bays": [
+    2,
+    2
+   ],
+   "sides": [
+    "left",
+    "right",
+    "left",
+    "right"
+   ],
+   "kb": 381
+  },
+  "w1800_onset_default_closed": {
+   "file": "models/w1800_onset_default_closed.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 2,
+   "shelves": 3,
+   "legs": 8,
+   "bays": [
+    1,
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right",
+    "right"
+   ],
+   "kb": 374
+  },
+  "w1800_onset_default_open": {
+   "file": "models/w1800_onset_default_open.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 2,
+   "shelves": 3,
+   "legs": 8,
+   "bays": [
+    1,
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right",
+    "right"
+   ],
+   "kb": 374
+  },
+  "w1800_onset_pair_closed": {
+   "file": "models/w1800_onset_pair_closed.glb",
+   "doors": 4,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 8,
+   "bays": [
+    2,
+    2
+   ],
+   "sides": [
+    "left",
+    "right",
+    "left",
+    "right"
+   ],
+   "kb": 381
+  },
+  "w1800_onset_pair_open": {
+   "file": "models/w1800_onset_pair_open.glb",
+   "doors": 4,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 8,
+   "bays": [
+    2,
+    2
+   ],
+   "sides": [
+    "left",
+    "right",
+    "left",
+    "right"
+   ],
+   "kb": 381
+  },
+  "w1800_none_default_closed": {
+   "file": "models/w1800_none_default_closed.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 2,
+   "shelves": 3,
+   "legs": 8,
+   "bays": [
+    1,
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right",
+    "right"
+   ],
+   "kb": 373
+  },
+  "w1800_none_default_open": {
+   "file": "models/w1800_none_default_open.glb",
+   "doors": 3,
+   "hinges": 2,
+   "walls": 2,
+   "shelves": 3,
+   "legs": 8,
+   "bays": [
+    1,
+    1,
+    1
+   ],
+   "sides": [
+    "left",
+    "right",
+    "right"
+   ],
+   "kb": 373
+  },
+  "w1800_none_pair_closed": {
+   "file": "models/w1800_none_pair_closed.glb",
+   "doors": 4,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 8,
+   "bays": [
+    2,
+    2
+   ],
+   "sides": [
+    "left",
+    "right",
+    "left",
+    "right"
+   ],
+   "kb": 381
+  },
+  "w1800_none_pair_open": {
+   "file": "models/w1800_none_pair_open.glb",
+   "doors": 4,
+   "hinges": 2,
+   "walls": 1,
+   "shelves": 2,
+   "legs": 8,
+   "bays": [
+    2,
+    2
+   ],
+   "sides": [
+    "left",
+    "right",
+    "left",
+    "right"
+   ],
+   "kb": 381
+  }
+ }
+}
