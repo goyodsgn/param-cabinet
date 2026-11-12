@@ -27,24 +27,27 @@ LAYOUTS = {"default": None, "pair": {900: [2], 1200: [2], 1500: [1, 2], 1800: [2
 
 
 def oak_texture(size=512, seed=7):
-    """Procedural light oak grain (made here, no outside image)."""
-    from PIL import Image
+    """Procedural light oak with vertical grain (made here, no outside image).
+    Image columns = across the door (u), rows = up the door (v)."""
+    from PIL import Image, ImageFilter
 
     rng = np.random.default_rng(seed)
     y, x = np.mgrid[0:size, 0:size].astype(float) / size
-    # smooth noise from a few random sine waves
-    warp = sum(rng.uniform(0.01, 0.04) * np.sin(2 * math.pi * (rng.uniform(1, 4) * x + rng.uniform(0, 1)))
-               for _ in range(5))
-    rings = np.sin(2 * math.pi * (y + warp) * 38 + 3 * np.sin(2 * math.pi * x * 2.0))
-    fine = rng.normal(0, 1, (size, size))
-    fine = np.cumsum(fine, axis=1)
-    fine = (fine - fine.mean()) / (fine.std() + 1e-9)
-    t = 0.5 + 0.22 * rings + 0.06 * np.clip(fine, -2, 2)
-    base = np.array([196, 160, 112], float)
-    dark = np.array([150, 112, 70], float)
-    img = base * t[..., None] + dark * (1 - t[..., None])
-    img = np.clip(img, 0, 255).astype(np.uint8)
-    return Image.fromarray(img, "RGB")
+    # broad grain bands running up the board, gently wandering sideways
+    wander = 0.012 * np.sin(2 * math.pi * (1.1 * y + rng.uniform())) + 0.006 * np.sin(2 * math.pi * (2.7 * y + rng.uniform()))
+    bands = 0.5 + 0.5 * np.sin(2 * math.pi * (x + wander) * 11 + 1.5 * np.sin(2 * math.pi * x * 2))
+    # fine streaks: per-column noise, stretched along the grain
+    cols = np.convolve(rng.normal(0, 1, size * 3), np.ones(3) / 3, mode="same")[size:2 * size]
+    streak = (cols - cols.mean()) / (cols.std() + 1e-9)
+    shift = (wander * size).astype(int)
+    idx = (np.arange(size)[None, :] + shift) % size
+    streak = streak[idx]
+    t = np.clip(0.55 + 0.18 * (bands - 0.5) + 0.07 * streak, 0, 1)
+    light = np.array([214, 182, 138], float)
+    dark = np.array([176, 138, 94], float)
+    img = dark + (light - dark) * t[..., None]
+    im = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB")
+    return im.filter(ImageFilter.GaussianBlur(0.6))
 
 
 def material_of(name):
