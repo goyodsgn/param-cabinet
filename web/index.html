@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI 파라메트릭 하부장 3D | Parametric Cabinet by Jeongyeon Kim</title>
-<meta name="description" content="폭·높이·상판·문 배치를 바꾸면 설계 규칙에 따라 문, 힌지, 칸막이, 선반, 다릿발이 바뀌는 파라메트릭 하부장 3D. AI(Claude)와 CadQuery로 만드는 김정연(Jeongyeon Kim)의 연구 결과물입니다.">
+<meta name="description" content="폭·높이·상판·문 배치를 바꾸면 설계 규칙에 따라 문, 힌지, 칸막이, 선반, 다릿발이 바뀌는 파라메트릭 하부장 3D. 같은 규칙으로 AI 에이전트가 만든 키큰장, 상부장, 오픈 선반, 서랍장, 코너장도 볼 수 있습니다. AI(Claude)와 CadQuery로 만드는 김정연(Jeongyeon Kim)의 연구 결과물입니다.">
 <meta name="author" content="Jeongyeon Kim (김정연)">
 <link rel="canonical" href="https://goyodsgn.github.io/param-cabinet/">
 <meta property="og:type" content="website">
@@ -24,6 +24,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: #fff; color: var(--ink);
     font-family: "Pretendard", "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .info .q { font-style: normal; }
   .wrap { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 14px; height: 100%; }
   #panel { display: flex; flex-direction: column; gap: 12px; }
   #view { position: relative; flex: 1; min-height: 300px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
@@ -41,6 +42,10 @@
   .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
   .info { font-size: 13px; line-height: 1.6; border-top: 1px solid var(--line); padding-top: 8px; }
   .info b { font-weight: 600; }
+  .info details { margin-top: 4px; }
+  .info summary { cursor: default; font-weight: 600; }
+  .info ul { margin: 4px 0 0; padding-left: 18px; }
+  body.compact .info details { display: none; }
   .info a { color: var(--ink); text-decoration: underline; text-decoration-color: rgba(31,31,31,.3); text-underline-offset: 2px; }
   .info a:hover { text-decoration-color: var(--ink); }
   /* Compact mode for small embeds: the 3D fills the frame, options open over it */
@@ -84,6 +89,12 @@ const T = EN ? {
   note: "Depth 600 mm. Doors, hinges, walls, shelves and legs follow the design rules of one parametric model.",
   updated: (d, r) => `Latest version: ${d}${r ? " (" + r + ")" : ""}`,
   credit: `<a href="https://jeongyeon.framer.website/en/project/ai-parametric-cabinet-live" target="_top">Jeongyeon Kim · AI parametric cabinet research</a>`,
+  product: "Product", base: "Base cabinet", size: "Size (agent's two versions)", fronts: "Doors / drawer fronts",
+  frontState: { show: "Shown", hide: "Hidden" },
+  names: { f1_tall: "Tall cabinet", f2_wall: "Wall cabinet", f3_open: "Open shelf", f4_drawer: "Drawers", f5_corner: "Corner cabinet" },
+  famInfo: (c) => `<b>${c.doors ?? 0}</b> doors · <b>${c.drawers ?? 0}</b> drawers · <b>${c.shelves ?? 0}</b> shelves · <b>${c.legs ?? 0}</b> legs`,
+  famNote: "Built by the AI agent from the base cabinet rules only, with no rules for this product. Checked by the rule checker.",
+  customer: "Customer", notes: "What the agent decided (in Korean)",
 } : {
   width: "폭", height: "높이", top: "상판", layout: "문 배치", door: "문",
   tops: { inset: "측판 사이", onset: "위를 덮음", none: "없음 (싱크대)" },
@@ -93,10 +104,18 @@ const T = EN ? {
   note: "깊이 600mm. 문, 힌지, 칸막이, 선반, 다릿발은 하나의 파라메트릭 모델에 정해 둔 설계 규칙에 따라 바뀝니다.",
   updated: (d, r) => `최신 버전: ${d}${r ? " (" + r + ")" : ""}`,
   credit: `<a href="https://jeongyeon.framer.website/project/ai-parametric-cabinet-live" target="_top">김정연 · AI 파라메트릭 하부장 연구</a>`,
+  product: "제품", base: "하부장", size: "크기 (에이전트가 만든 두 버전)", fronts: "문·서랍 앞판",
+  frontState: { show: "보임", hide: "숨김" },
+  names: {},
+  famInfo: (c) => `문 <b>${c.doors ?? 0}</b>짝 · 서랍 <b>${c.drawers ?? 0}</b>개 · 선반 <b>${c.shelves ?? 0}</b>개 · 다릿발 <b>${c.legs ?? 0}</b>개`,
+  famNote: "이 제품의 규칙 없이 하부장 설계 규칙만 주고 AI 에이전트가 만든 모델입니다. 규칙 검사기로 확인했습니다.",
+  customer: "고객", notes: "에이전트가 스스로 정한 것",
 };
 
-const state = { W: 1500, H: 850, D: 600, top: "onset", layout: "left", open: false };
+const state = { W: 1500, H: 850, D: 600, top: "onset", layout: "left", open: false, product: "base", turn: 2, fronts: "show" };
 let version = {};
+let famIndex = [];
+const famCache = {};
 
 // ---------- three.js scene ----------
 const view = document.getElementById("view");
@@ -178,6 +197,54 @@ function box(parent, mat, x, y, z, dx, dy, dz) {
   return m;
 }
 
+function clearGroup() {
+  if (group) {
+    scene.remove(group);
+    group.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map) { o.material.map.dispose(); o.material.dispose(); } });
+    group = null;
+  }
+}
+
+// a model the agent made: meshes in cabinet mm coordinates, shown as they are
+function buildFamily(item) {
+  clearGroup();
+  group = new THREE.Group();
+  const [x0, y0, , x1, y1] = item.box;
+  for (const part of item.parts) {
+    if (part.m === "front" && state.fronts === "hide") continue;
+    const pos = new Float32Array(part.v.length);
+    for (let i = 0; i < part.v.length; i += 3) {
+      pos[i] = part.v[i] * S; pos[i + 1] = part.v[i + 2] * S; pos[i + 2] = -part.v[i + 1] * S;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setIndex(part.i);
+    geo.computeVertexNormals();
+    let mat = M.body;
+    if (part.m === "leg" || part.m === "pin") mat = M.leg;
+    if (part.m === "front") {
+      geo.computeBoundingBox();
+      const b = geo.boundingBox;
+      // planar UVs on the front face so the oak grain runs up the door
+      const uv = new Float32Array((pos.length / 3) * 2);
+      const wide = (b.max.x - b.min.x) >= (b.max.z - b.min.z);
+      for (let i = 0, j = 0; i < pos.length; i += 3, j += 2) {
+        uv[j] = (wide ? pos[i] - b.min.x : pos[i + 2] - b.min.z) / 0.6;
+        uv[j + 1] = (pos[i + 1] - b.min.y) / 0.6;
+      }
+      geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+      mat = oakMaterial(600, 600);
+    }
+    const m = new THREE.Mesh(geo, mat);
+    m.castShadow = m.receiveShadow = true;
+    group.add(m);
+    if (part.m !== "pin") group.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), M.line));
+  }
+  group.position.x = (-(x0 + x1) / 2) * S;
+  group.position.z = ((y0 + y1) / 2) * S;
+  scene.add(group);
+}
+
 function build() {
   const n = minDoors(state.W);
   const opts = layoutOptions(n);
@@ -187,10 +254,7 @@ function build() {
   const L = computeLayout({ W: state.W, H: state.H, D: state.D, top_mode: state.top, door_layout: groups,
     single_door_hinge: state.layout === "single" ? "left" : null });
   const p = L.p, t = p.t;
-  if (group) {
-    scene.remove(group);
-    group.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map) { o.material.map.dispose(); o.material.dispose(); } });
-  }
+  clearGroup();
   group = new THREE.Group();
   const bodyD = L.Dc - p.back_t;
   const sideH = state.top === "onset" ? L.Hc - t : L.Hc;
@@ -236,12 +300,12 @@ function build() {
 }
 
 let framed = false;
-function frame() {
-  controls.target.set(0, (state.H / 2) * S, 0);
+function frame(W = state.W, H = state.H) {
+  controls.target.set(0, (H / 2) * S, 0);
   if (!framed) {
-    const size = Math.max(state.W, state.H) * S;
+    const size = Math.max(W, H) * S;
     const dist = size * 2.0 + 0.5;
-    camera.position.set(-dist * 0.45, state.H * S * 0.75 + dist * 0.35, dist * 0.82);
+    camera.position.set(-dist * 0.45, H * S * 0.75 + dist * 0.35, dist * 0.82);
     framed = true;
   }
   controls.update();
@@ -288,9 +352,18 @@ function slider(title, key, min, max, step) {
 }
 
 let shownDoors = -1;
+function famName(f) { return T.names[f.family] || f.name; }
+function productSeg() {
+  const seen = [];
+  for (const f of famIndex) if (!seen.find((x) => x.family === f.family)) seen.push(f);
+  const g = seg(T.product, "product", [["base", T.base], ...seen.map((f) => [f.family, famName(f)])]);
+  g.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { framed = false; }, { capture: true }));
+  return g;
+}
 function controlsFor(L) {
   const c = document.getElementById("controls");
   c.innerHTML = "";
+  if (famIndex.length) c.appendChild(productSeg());
   c.appendChild(slider(T.width, "W", 450, 1800, 10));
   c.appendChild(slider(T.height, "H", 600, 2000, 10));
   c.appendChild(seg(T.top, "top", ["inset", "onset", "none"].map((k) => [k, T.tops[k]])));
@@ -301,7 +374,33 @@ function controlsFor(L) {
   shownDoors = L.n;
 }
 
+function famControls() {
+  const c = document.getElementById("controls");
+  c.innerHTML = "";
+  c.appendChild(productSeg());
+  const turns = famIndex.filter((f) => f.family === state.product);
+  c.appendChild(seg(T.size, "turn", turns.map((f) => [f.turn, f.size[0] + " × " + f.size[1] + " × " + f.size[2]])));
+  c.appendChild(seg(T.fronts, "fronts", [["show", T.frontState.show], ["hide", T.frontState.hide]]));
+}
+async function updateFamily() {
+  const entry = famIndex.find((f) => f.family === state.product && f.turn === state.turn) ||
+    famIndex.find((f) => f.family === state.product);
+  state.turn = entry.turn;
+  if (!famCache[entry.file]) famCache[entry.file] = await fetch("family/" + entry.file).then((r) => r.json());
+  const item = famCache[entry.file];
+  buildFamily(item);
+  frame(item.box[3] - item.box[0], item.box[5] - item.box[2]);
+  famControls();
+  const esc = (x) => String(x).replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[ch]);
+  document.getElementById("info").innerHTML = T.famInfo(item.counts) +
+    `<span class="note"><br>${T.famNote}</span>` +
+    `<br>${T.customer}: ` + item.customer.map((q) => `“${esc(q)}”`).join(" → ") +
+    (item.notes.length ? `<details><summary>${T.notes}</summary><ul>${item.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul></details>` : "") +
+    (version.updated ? "<br>" + T.updated(version.updated, version.rev) + " · " : "<br>") + T.credit;
+}
+
 function update(redrawControls = true) {
+  if (state.product !== "base") { updateFamily(); return; }
   const L = build();
   frame();
   if (redrawControls) controlsFor(L);
@@ -336,8 +435,10 @@ window.addEventListener("resize", () => { setCompact(); liftView(); });
 setCompact();
 
 resize();
-fetch("version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
-  .then((v) => { version = v || {}; update(); });
+Promise.all([
+  fetch("version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+  fetch("family/index.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+]).then(([v, idx]) => { version = v || {}; famIndex = idx || []; update(); });
 </script>
 </body>
 </html>
