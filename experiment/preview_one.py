@@ -23,7 +23,8 @@ def main(path, out, title=""):
     bbs = {n: s.BoundingBox() for n, s in parts}
     doors = [(b.xmin, b.zmin, b.xlen, b.zlen) for n, b in bbs.items() if n.startswith("door_")]
     inside = [(b.xmin, b.zmin, b.xlen, b.zlen) for n, b in bbs.items()
-              if n.split("_")[0] in ("side", "top", "bottom", "divider", "shelf") or n == "top"]
+              if n.split("_")[0] in ("side", "top", "bottom", "divider", "shelf") or n == "top"
+              or (n.startswith("drawer_") and "front" not in n)]
     y_front = min(b.ymin for b in bbs.values())
     render([(n, mesh_of(s)) for n, s in parts if not n.startswith("pin_")], (W, D, H), out, title,
            doors=doors, inside=inside, y_front=y_front)

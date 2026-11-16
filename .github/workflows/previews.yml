@@ -1,0 +1,38 @@
+name: previews
+
+on:
+  workflow_dispatch:
+    inputs:
+      folder:
+        description: "Folder of generated models"
+        default: "generated_family"
+      out:
+        description: "Folder for the PNGs"
+        default: "results/family"
+
+permissions:
+  contents: write
+
+jobs:
+  previews:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Render every model
+        run: |
+          mkdir -p "${{ inputs.out }}"
+          for f in ${{ inputs.folder }}/*.py; do
+            n=$(basename "$f" .py)
+            python experiment/preview_one.py "$f" "${{ inputs.out }}/$n.png" "$n" || echo "failed $n"
+          done
+      - name: Save
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${{ inputs.out }}"
+          git diff --cached --quiet || (git commit -m "Re-render previews [skip ci]" && git pull --rebase && git push)
