@@ -95,7 +95,7 @@ def main():
                 g = grade(dst, expect)
                 if g["runs"]:
                     subprocess.run([sys.executable, os.path.join(ROOT, "experiment", "preview_one.py"), dst,
-                                    os.path.join(pics, name + ".png"), f"{f['family']} {k}"],
+                                    os.path.join(pics, name + ".png"), f"{f['id']} turn {k}"],
                                    capture_output=True, timeout=300)
             u = res.get("usage") or {}
             row = {"id": f["id"], "family": f["family"], "turn": k, "customer": turn,
