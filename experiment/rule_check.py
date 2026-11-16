@@ -273,7 +273,18 @@ def check_parts(parts):
             c = s.Center()
             r2 = s.Volume() / (math.pi * max(b["z1"] - b["z0"], 1e-9))
             legs.append({"cx": c.x, "cy": c.y, "d": 2 * math.sqrt(r2)})
-    if legs:
+    if legs and not front_only:
+        # Not a plain box (e.g. L-shaped corner cabinet): legs follow the outline, not a grid.
+        # Check every straight line of legs: neighbours at most leg_max apart.
+        for axis, other in (("x", "y"), ("y", "x")):
+            lines = {}
+            for l in legs:
+                lines.setdefault(round(l["c" + other]), []).append(l["c" + axis])
+            for key, cs in lines.items():
+                cs = sorted(cs)
+                if any(q - p > LEG_MAX + TOL for p, q in zip(cs, cs[1:])):
+                    fail("leg_spacing", f"legs on the line {other}={key}: {max(q - p for p, q in zip(cs, cs[1:])):.0f} apart > {LEG_MAX:.0f}")
+    elif legs:
         d = legs[0]["d"]
         for axis, lo, hi in (("x", C["x0"], C["x1"]), ("y", C["y0"], C["y1"])):
             cs = sorted({round(l["c" + axis], 1) for l in legs})
