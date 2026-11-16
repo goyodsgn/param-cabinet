@@ -357,7 +357,6 @@ function productSeg() {
   const seen = [];
   for (const f of famIndex) if (!seen.find((x) => x.family === f.family)) seen.push(f);
   const g = seg(T.product, "product", [["base", T.base], ...seen.map((f) => [f.family, famName(f)])]);
-  g.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { framed = false; }, { capture: true }));
   return g;
 }
 function controlsFor(L) {
@@ -399,7 +398,9 @@ async function updateFamily() {
     (version.updated ? "<br>" + T.updated(version.updated, version.rev) + " · " : "<br>") + T.credit;
 }
 
+let lastProduct = state.product;
 function update(redrawControls = true) {
+  if (state.product !== lastProduct) { framed = false; lastProduct = state.product; }
   if (state.product !== "base") { updateFamily(); return; }
   const L = build();
   frame();
