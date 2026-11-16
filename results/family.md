@@ -16,8 +16,8 @@
 | 오픈 선반 | 2 | 폭을 1400으로 넓혀줘. | O | O | O | O | O | 44 (0/0/6/8) |  |
 | 서랍장 | 1 | 서랍 4단짜리 서랍장 만들어줘. 폭 600, 높이 850, 깊이 580. | O | O | O | O | O | 33 (0/4/0/4) |  |
 | 서랍장 | 2 | 폭 900으로 하고 서랍은 3단으로 줄여줘. | O | O | O | O | O | 29 (0/3/0/6) |  |
-| 코너장 | 1 | ㄱ자 주방 모서리에 들어가는 코너 하부장 만들어줘. 양쪽 길이 다 900, 높이 850, 깊이 580. | O | X | O | O | X | 27 (2/0/1/8) | door_gap: door_1: back face -342.0 from carcass, not 2; hinge_place: door_2: cups not 22.5 from the hinge edge; shelf_pins: shelf_1 right: 2 pins for shelf dept |
-| 코너장 | 2 | 양쪽 길이를 1000으로 늘려줘. | O | X | O | O | X | 27 (2/0/1/8) | door_gap: door_1: back face -442.0 from carcass, not 2; hinge_place: door_2: cups not 22.5 from the hinge edge; shelf_pins: shelf_1 right: 2 pins for shelf dept |
+| 코너장 | 1 | ㄱ자 주방 모서리에 들어가는 코너 하부장 만들어줘. 양쪽 길이 다 900, 높이 850, 깊이 580. | O | X | O | O | X | 27 (2/0/1/8) | leg_place: 4 legs along x, minimum is 3 |
+| 코너장 | 2 | 양쪽 길이를 1000으로 늘려줘. | O | X | O | O | X | 27 (2/0/1/8) | leg_place: 4 legs along x, minimum is 3 |
 
 ## 에이전트가 기존 규칙을 어떻게 옮겼나 (에이전트 메모, 마지막 턴)
 
