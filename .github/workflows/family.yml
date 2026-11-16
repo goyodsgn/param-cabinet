@@ -12,6 +12,10 @@ on:
       max_turns:
         description: "Max agent steps per customer turn"
         default: "10"
+      grade_only:
+        description: "Only re-grade the saved models (no agent)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -27,12 +31,18 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
+      - name: Re-grade saved models
+        if: ${{ inputs.grade_only }}
+        run: python experiment/run_family.py --grade-only --model ${{ inputs.model }}
       - uses: actions/setup-node@v4
+        if: ${{ !inputs.grade_only }}
         with:
           node-version: "20"
       - name: Install Claude Code
+        if: ${{ !inputs.grade_only }}
         run: npm install -g @anthropic-ai/claude-code
       - name: Build five product families with the agent (Pro subscription)
+        if: ${{ !inputs.grade_only }}
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: rm -rf generated_family results/family && python experiment/run_family.py --only "${{ inputs.only }}" --model ${{ inputs.model }} --max-turns ${{ inputs.max_turns }}

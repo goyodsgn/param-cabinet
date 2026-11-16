@@ -10,6 +10,7 @@ Every turn is graded without an answer key:
 and the agent's own notes (which rules it carried over, what it decided) are saved for review.
 
 usage: python experiment/run_family.py [--only f1_tall,f2_wall] [--model claude-sonnet-5-5] [--max-turns 10]
+       python experiment/run_family.py --grade-only   (re-grade saved models after a checker change)
 Writes generated_family/<id>_t<k>.py, results/family.md / .csv, results/family/<id>_t<k>.png
 """
 
@@ -58,12 +59,66 @@ def grade(path, expect):
     return out
 
 
+def write_report(rows, model):
+    with open(os.path.join(ROOT, "results", "family.csv"), "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
+        w.writeheader()
+        for r in rows:
+            w.writerow({k: json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v for k, v in r.items()})
+
+    ox = lambda v: "O" if v else "X"  # noqa: E731
+    out = sum(r["output"] for r in rows)
+    md = ["# 제품군 확장 테스트 (연구 질문 3)", "",
+          "하부장 설계 규칙만 주고, 규칙이 없는 다른 제품을 만들게 했습니다. 제품마다 만들기 → 크기 바꾸기 2턴입니다.",
+          "정답 모델은 없고, 범용 규칙 검사기와 요청 크기·개수로 채점합니다.", "",
+          f"- 통과: {sum(r['pass'] for r in rows)} / {len(rows)} 턴",
+          f"- 에이전트: Claude Code (Pro), 모델 {model}. 출력 토큰 {out:,}, API 환산 약 {sum(r['usd'] for r in rows):.2f}달러 (Pro라 청구 없음), "
+          f"{sum(r['seconds'] for r in rows) // 60}분", "",
+          "| 제품 | 턴 | 고객 | 실행 | 규칙 | 크기 | 요청 | 통과 | 부품 수 (문/서랍/선반/다리) | 걸린 것 |",
+          "|---|---|---|---|---|---|---|---|---|---|"]
+    for r in rows:
+        c = r["counts"]
+        cnt = f"{c.get('parts', '-')} ({c.get('doors', '-')}/{c.get('drawers', '-')}/{c.get('shelves', '-')}/{c.get('legs', '-')})"
+        why = "; ".join(f"{k}: {v[0]}" for k, v in r["failed"].items() if v) or r["error"]
+        md.append(f"| {r['family']} | {r['turn']} | {r['customer']} | {ox(r['runs'])} | {ox(r['rules'])} | {ox(r['size'])} | "
+                  f"{ox(r['request'])} | {ox(r['pass'])} | {cnt} | {why[:160]} |")
+    md += ["", "## 에이전트가 기존 규칙을 어떻게 옮겼나 (에이전트 메모, 마지막 턴)", ""]
+    for r in rows:
+        if r["turn"] == 2:
+            md += [f"### {r['family']}", ""] + [f"- {n}" for n in r["notes"]] + [""]
+    open(os.path.join(ROOT, "results", "family.md"), "w", encoding="utf-8").write("\n".join(md) + "\n")
+
+
+def regrade(model):
+    """Grade the saved models again (after a checker change) without running the agent."""
+    fams = {f["id"]: f for f in json.load(open(os.path.join(ROOT, "experiment", "families.json"), encoding="utf-8"))}
+    rows = []
+    with open(os.path.join(ROOT, "results", "family.csv"), encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            k = int(r["turn"])
+            r["turn"] = k
+            g = grade(os.path.join(ROOT, "generated_family", f"{r['id']}_t{k}.py"), fams[r["id"]]["expect"][k - 1])
+            for key in ("steps", "seconds", "output"):
+                r[key] = int(float(r[key] or 0))
+            r["usd"] = float(r["usd"] or 0)
+            r.update({"runs": g["runs"], "rules": g["rules"], "size": g["size"], "request": g["request"],
+                      "pass": g["runs"] and g["rules"] and g["size"] and g["request"], "bbox": g.get("bbox"),
+                      "counts": g["counts"], "failed": g["failed"], "notes": g["notes"],
+                      "error": g.get("error", "")})
+            rows.append(r)
+            print(r["id"], k, {x: r[x] for x in ("runs", "rules", "size", "request")}, g["failed"], flush=True)
+    write_report(rows, model)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default="")
     ap.add_argument("--model", default="claude-sonnet-5-5")
     ap.add_argument("--max-turns", type=int, default=10)
+    ap.add_argument("--grade-only", action="store_true", help="re-grade saved models, no agent")
     args = ap.parse_args()
+    if args.grade_only:
+        return regrade(args.model)
     if not os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
         sys.exit("CLAUDE_CODE_OAUTH_TOKEN is not set.")
 
@@ -113,33 +168,7 @@ def main():
         open(os.path.join(gen, f["id"] + ".chat.md"), "w", encoding="utf-8").write("\n".join(log))
         shutil.rmtree(work, ignore_errors=True)
 
-    with open(os.path.join(ROOT, "results", "family.csv"), "w", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
-        w.writeheader()
-        for r in rows:
-            w.writerow({k: json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v for k, v in r.items()})
-
-    ox = lambda v: "O" if v else "X"  # noqa: E731
-    out = sum(r["output"] for r in rows)
-    md = ["# 제품군 확장 테스트 (연구 질문 3)", "",
-          "하부장 설계 규칙만 주고, 규칙이 없는 다른 제품을 만들게 했습니다. 제품마다 만들기 → 크기 바꾸기 2턴입니다.",
-          "정답 모델은 없고, 범용 규칙 검사기와 요청 크기·개수로 채점합니다.", "",
-          f"- 통과: {sum(r['pass'] for r in rows)} / {len(rows)} 턴",
-          f"- 에이전트: Claude Code (Pro), 모델 {args.model}. 출력 토큰 {out:,}, API 환산 약 {sum(r['usd'] for r in rows):.2f}달러 (Pro라 청구 없음), "
-          f"{sum(r['seconds'] for r in rows) // 60}분", "",
-          "| 제품 | 턴 | 고객 | 실행 | 규칙 | 크기 | 요청 | 통과 | 부품 수 (문/서랍/선반/다리) | 걸린 것 |",
-          "|---|---|---|---|---|---|---|---|---|---|"]
-    for r in rows:
-        c = r["counts"]
-        cnt = f"{c.get('parts', '-')} ({c.get('doors', '-')}/{c.get('drawers', '-')}/{c.get('shelves', '-')}/{c.get('legs', '-')})"
-        why = "; ".join(f"{k}: {v[0]}" for k, v in r["failed"].items() if v) or r["error"]
-        md.append(f"| {r['family']} | {r['turn']} | {r['customer']} | {ox(r['runs'])} | {ox(r['rules'])} | {ox(r['size'])} | "
-                  f"{ox(r['request'])} | {ox(r['pass'])} | {cnt} | {why[:160]} |")
-    md += ["", "## 에이전트가 기존 규칙을 어떻게 옮겼나 (에이전트 메모, 마지막 턴)", ""]
-    for r in rows:
-        if r["turn"] == 2:
-            md += [f"### {r['family']}", ""] + [f"- {n}" for n in r["notes"]] + [""]
-    open(os.path.join(ROOT, "results", "family.md"), "w", encoding="utf-8").write("\n".join(md) + "\n")
+    write_report(rows, args.model)
 
 
 if __name__ == "__main__":

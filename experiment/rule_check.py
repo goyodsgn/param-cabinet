@@ -67,7 +67,76 @@ def cups_of(solid):
             continue
         if abs(BRepAdaptor_Surface(f.wrapped).Cylinder().Radius() - CUP_R) < 0.5:
             c = f.Center()
-            out.append((c.x, c.z))
+            out.append((c.x, c.y, c.z))
+    return out
+
+
+def door_axes(b):
+    """(u, thin): u = the door's horizontal width axis, thin = its thickness axis."""
+    return ("x", "y") if b["y1"] - b["y0"] < b["x1"] - b["x0"] else ("y", "x")
+
+
+def check_doors_any_direction(doors, fronts, body, fail):
+    """Doors that do not all face the front (e.g. an L-shaped corner cabinet): measure real distances.
+    - every door is door_gap from the carcass,
+    - neighbours in the same plane are 2 * door_gap apart, doors at an angle at least door_gap apart,
+    - cell width, hinge count and hinge cup positions along the door's own width axis.
+    The coverage of the carcass outline is not checked here."""
+    for i, (n, s, b) in enumerate(doors):
+        u, thin = door_axes(b)
+        w, h = b[u + "1"] - b[u + "0"], b["z1"] - b["z0"]
+        if n not in fronts and w + 2 * GAP > CELL_MAX + TOL:
+            fail("door_cell", f"{n}: cell {w + 2 * GAP:.0f} > {CELL_MAX:.0f}")
+        d = min(s.distance(c) for c in body)
+        if abs(d - GAP) > TOL:
+            fail("door_gap", f"{n}: {d:.1f} from the carcass, not {GAP:.0f}")
+        for m, s2, c in doors[i + 1:]:
+            d2 = s.distance(s2)
+            if d2 > 50:
+                continue
+            u2, thin2 = door_axes(c)
+            same_plane = thin2 == thin and abs(c[thin + "0"] - b[thin + "0"]) <= TOL
+            if same_plane and abs(d2 - 2 * GAP) > TOL:
+                fail("door_gap", f"{n}+{m}: {d2:.1f} apart, not {2 * GAP:.0f}")
+            if not same_plane and d2 < GAP - TOL:
+                fail("door_gap", f"{n}+{m}: {d2:.1f} apart at the corner, under {GAP:.0f}")
+        if n in fronts:
+            continue
+        cups = cups_of(s)
+        need = hinge_rule(h)
+        if len(cups) != need:
+            fail("hinge_count", f"{n}: {len(cups)} hinges for door height {h:.0f}, rule {need}")
+        if cups:
+            k = 0 if u == "x" else 1
+            cu = sum(c[k] for c in cups) / len(cups)
+            want = b[u + "0"] + CUP_X if cu < (b[u + "0"] + b[u + "1"]) / 2 else b[u + "1"] - CUP_X
+            if any(abs(c[k] - want) > TOL for c in cups):
+                fail("hinge_place", f"{n}: cups not {CUP_X} from the hinge edge")
+            zs = sorted(c[2] for c in cups)
+            if len(zs) >= 2 and (abs(zs[0] - (b["z0"] + CUP_END)) > TOL or abs(zs[-1] - (b["z1"] - CUP_END)) > TOL):
+                fail("hinge_place", f"{n}: end cups not {CUP_END:.0f} from top/bottom")
+
+
+def shelf_edges(shelf, panels):
+    """Vertical faces of a shelf that rest against a panel (within 3 mm), as
+    (axis_across, coord, axis_along, lo, hi, panel_kind)."""
+    out = []
+    for f in shelf.Faces():
+        if f.geomType() != "PLANE":
+            continue
+        nv = f.normalAt()
+        if abs(nv.z) > 0.1:
+            continue
+        across, along = ("x", "y") if abs(nv.x) > abs(nv.y) else ("y", "x")
+        fb = f.BoundingBox()
+        coord = fb.xmin if across == "x" else fb.ymin
+        lo, hi = (fb.ymin, fb.ymax) if along == "y" else (fb.xmin, fb.xmax)
+        for name, pk, pb in panels:
+            near = min(abs(coord - pb[across + "0"]), abs(coord - pb[across + "1"]))
+            if near <= 3 + TOL and overlap_1d(lo, hi, pb[along + "0"], pb[along + "1"]) > 10 \
+                    and pb[across + "1"] - pb[across + "0"] < 60:
+                out.append((across, coord, along, lo, hi, pk if not name.startswith("back") else "back"))
+                break
     return out
 
 
@@ -105,7 +174,14 @@ def check_parts(parts):
     for rule in ("door_cell", "door_gap", "hinge_count", "hinge_place", "pair_sides"):
         ok(rule)
     sides = {}
-    for n, s, b in doors:
+    front_only = all(b["y1"] - b["y0"] < b["x1"] - b["x0"] and b["y1"] <= C["y0"] + TOL for _, _, b in doors)
+    if not front_only:
+        check_doors_any_direction(doors, fronts, [s for n, s, k, b in P if k in ("panel", "divider", "shelf")],
+                                  fail)
+        doors_old = []
+    else:
+        doors_old = doors
+    for n, s, b in doors_old:
         w, h = b["x1"] - b["x0"], b["z1"] - b["z0"]
         if n not in fronts and w + 2 * GAP > CELL_MAX + TOL:
             fail("door_cell", f"{n}: cell {w + 2 * GAP:.0f} > {CELL_MAX:.0f}")
@@ -116,7 +192,7 @@ def check_parts(parts):
                                                 ("bottom", b["z0"], C["z0"], -1, "z"), ("top", b["z1"], C["z1"], 1, "z")):
             other = "z" if axis == "x" else "x"
             best = None
-            for m, _, c in doors:
+            for m, _, c in doors_old:
                 if m == n or overlap_1d(b[other + "0"], b[other + "1"], c[other + "0"], c[other + "1"]) <= TOL:
                     continue
                 d = (c[axis + "0"] - edge) if sign > 0 else (edge - c[axis + "1"])
@@ -142,11 +218,11 @@ def check_parts(parts):
             want_x = b["x0"] + CUP_X if side == "left" else b["x1"] - CUP_X
             if any(abs(c[0] - want_x) > TOL for c in cups):
                 fail("hinge_place", f"{n}: cups not {CUP_X} from the hinge edge")
-            zs = sorted(c[1] for c in cups)
+            zs = sorted(c[2] for c in cups)
             if len(zs) >= 2 and (abs(zs[0] - (b["z0"] + CUP_END)) > TOL or abs(zs[-1] - (b["z1"] - CUP_END)) > TOL):
                 fail("hinge_place", f"{n}: end cups not {CUP_END:.0f} from top/bottom")
     # Pairs: two side-by-side doors with no inner wall behind the joint must open left | right
-    hinged = [d for d in doors if d[0] not in fronts]
+    hinged = [d for d in doors_old if d[0] not in fronts]
     for i, (n, _, b) in enumerate(hinged):
         for m, _, c in hinged[i + 1:]:
             if overlap_1d(b["z0"], b["z1"], c["z0"], c["z1"]) <= TOL or abs(c["x0"] - b["x1"] - 2 * GAP) > TOL:
@@ -164,22 +240,29 @@ def check_parts(parts):
         if k == "pin":
             c = s.Center()
             pins.append((n, {"cx": c.x, "cy": c.y, "cz": c.z}))
+    panels = [(n, k, b) for n, s, k, b in P if k in ("panel", "divider")]
     for n, s, k, b in P:
         if k != "shelf":
             continue
-        depth = b["y1"] - b["y0"]
-        need = math.ceil(max(depth - 2 * PIN_END, 0) / PIN_MAX) + 1
-        for side, x in (("left", b["x0"]), ("right", b["x1"])):
-            ys = sorted(p["cy"] for _, p in pins
-                        if b["z0"] - 6 < p["cz"] < b["z0"] and abs(p["cx"] - x) < 12
-                        and b["y0"] - TOL <= p["cy"] <= b["y1"] + TOL)
+        edges = shelf_edges(s, panels)
+        if not any(pk != "back" for *_, pk in edges):
+            fail("shelf_pins", f"{n}: no side panel or inner wall next to the shelf")
+        for across, coord, along, lo, hi, pk in edges:
+            span = hi - lo
+            need = math.ceil(max(span - 2 * PIN_END, 0) / PIN_MAX) + 1
+            ys = sorted(p["c" + along] for _, p in pins
+                        if b["z0"] - 6 < p["cz"] < b["z0"] and abs(p["c" + across] - coord) < 12
+                        and lo - TOL <= p["c" + along] <= hi + TOL)
+            where = f"{n} at {across}={coord:.0f}"
+            if pk == "back" and not ys:
+                continue  # pins in the back panel are optional
             if len(ys) != need:
-                fail("shelf_pins", f"{n} {side}: {len(ys)} pins for shelf depth {depth:.0f}, rule {need}")
+                fail("shelf_pins", f"{where}: {len(ys)} pins for shelf edge {span:.0f}, rule {need}")
                 continue
-            if abs(ys[0] - (b["y0"] + PIN_END)) > TOL or abs(ys[-1] - (b["y1"] - PIN_END)) > TOL:
-                fail("shelf_pins", f"{n} {side}: front/back pins not {PIN_END:.0f} from the edges")
+            if abs(ys[0] - (lo + PIN_END)) > TOL or abs(ys[-1] - (hi - PIN_END)) > TOL:
+                fail("shelf_pins", f"{where}: end pins not {PIN_END:.0f} from the edges")
             if any(q - p > PIN_MAX + TOL for p, q in zip(ys, ys[1:])):
-                fail("shelf_pins", f"{n} {side}: pins more than {PIN_MAX:.0f} apart")
+                fail("shelf_pins", f"{where}: pins more than {PIN_MAX:.0f} apart")
 
     # Legs
     ok("leg_spacing")
