@@ -6,28 +6,28 @@
 
 | 캐비닛 | 결과 | 걸린 규칙 |
 |---|---|---|
-| 기본 1200x850x580 | 실패 | shelf_pins |
+| 기본 1200x850x580 | 통과 | - |
 | 600x700x560 문 1짝 | 통과 | - |
-| 2400x1700x900 키큰장 크기 | 실패 | shelf_pins |
-| 1500 한쪽문+양문, 상판 덮음 | 실패 | shelf_pins |
-| 900 싱크대(상판 없음), 뒷판 인셋 | 실패 | shelf_pins |
-| 1200x1500x450 아래칸 330 이상, 선반 3 | 실패 | shelf_pins |
-| 2100 한쪽문+양문+양문 | 실패 | shelf_pins |
+| 2400x1700x900 키큰장 크기 | 통과 | - |
+| 1500 한쪽문+양문, 상판 덮음 | 통과 | - |
+| 900 싱크대(상판 없음), 뒷판 인셋 | 통과 | - |
+| 1200x1500x450 아래칸 330 이상, 선반 3 | 통과 | - |
+| 2100 한쪽문+양문+양문 | 통과 | - |
 
-1 / 7 통과
+7 / 7 통과
 
 ## 2. 일부러 규칙 하나를 깨뜨린 캐비닛 (그 규칙에서 걸려야 함)
 
 | 깨뜨린 것 | 걸려야 할 규칙 | 실제로 걸린 규칙 | 판정 |
 |---|---|---|---|
-| 도어갭 3으로 | door_gap | door_gap, shelf_pins, connected | 맞게 잡음 |
-| 문 칸 폭 750 (W 1500, 최대 800으로) | door_cell | door_cell, shelf_pins | 맞게 잡음 |
-| 높이 1700인데 힌지 2개 | hinge_count | hinge_count, shelf_pins | 맞게 잡음 |
-| 힌지 끝 거리 150 | hinge_place | hinge_place, shelf_pins | 맞게 잡음 |
+| 도어갭 3으로 | door_gap | door_gap, connected | 맞게 잡음 |
+| 문 칸 폭 750 (W 1500, 최대 800으로) | door_cell | door_cell | 맞게 잡음 |
+| 높이 1700인데 힌지 2개 | hinge_count | hinge_count | 맞게 잡음 |
+| 힌지 끝 거리 150 | hinge_place | hinge_place | 맞게 잡음 |
 | 깊이 900인데 다보 간격 800 | shelf_pins | shelf_pins | 맞게 잡음 |
-| 다릿발 간격 800 | leg_spacing | shelf_pins, leg_spacing, leg_place | 맞게 잡음 |
-| 양문 사이에 칸막이를 빼버림 (경첩 R R) | pair_sides | pair_sides, shelf_pins | 맞게 잡음 |
-| 선반을 같은 자리에 하나 더 | overlap | shelf_pins, overlap | 맞게 잡음 |
+| 다릿발 간격 800 | leg_spacing | leg_spacing, leg_place | 맞게 잡음 |
+| 양문 사이에 칸막이를 빼버림 (경첩 R R) | pair_sides | pair_sides | 맞게 잡음 |
+| 선반을 같은 자리에 하나 더 | overlap | overlap | 맞게 잡음 |
 | 선반 하나가 공중에 떠 있음 | connected | door_gap, shelf_pins, connected | 맞게 잡음 |
 
 9 / 9 맞게 잡음
@@ -38,70 +38,15 @@
 
 | 묶음 | 모델 수 | 검사기 통과 | 정답 채점 통과 | 판정 일치 |
 |---|---|---|---|---|
-| 대화형 1턴 | 24 | 2 | 24 | 2 / 24 |
-| 대화형 최종 턴 | 24 | 7 | 24 | 7 / 24 |
-| 문장 기본 | 10 | 3 | 10 | 3 / 10 |
-| 문장 우선순위 | 12 | 1 | 12 | 1 / 12 |
+| 대화형 1턴 | 24 | 23 | 24 | 23 / 24 |
+| 대화형 최종 턴 | 24 | 23 | 24 | 23 / 24 |
+| 문장 기본 | 10 | 10 | 10 | 10 / 10 |
+| 문장 우선순위 | 12 | 12 | 12 | 12 / 12 |
 
 판정이 다른 모델:
 
-- 대화형 1턴 c01_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 1턴 c02_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 1턴 c03_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2"]} 
-- 대화형 1턴 c04_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 416, rule 2", "shelf_2 left: 4 pins for shelf depth 416, rule 2"]} 
-- 대화형 1턴 c05_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 1턴 c06_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2"]} 
-- 대화형 1턴 c07_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 536, rule 2", "shelf_2 left: 4 pins for shelf depth 536, rule 2"]} 
-- 대화형 1턴 c08_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 1턴 c09_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2", "shelf_2 right: 4 pins for shelf depth 566, rule 2", "shelf_3 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 1턴 c11_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 366, rule 2", "shelf_2 left: 4 pins for shelf depth 366, rule 2"]} 
-- 대화형 1턴 c12_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 1턴 c13_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 1턴 c14_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 516, rule 2", "shelf_2 left: 4 pins for shelf depth 516, rule 2", "shelf_2 right: 4 pins for shelf depth 516, rule 2", "shelf_3 left: 4 pins for shelf depth 516, rule 2"]} 
-- 대화형 1턴 c16_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 516, rule 2", "shelf_2 left: 4 pins for shelf depth 516, rule 2"]} 
-- 대화형 1턴 c17_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2", "shelf_2 right: 4 pins for shelf depth 566, rule 2", "shelf_3 left: 4 pins for shelf depth 566, rule 2", "shelf_3 right: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 1턴 c18_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 1턴 c19_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins, overlap {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 416, rule 2", "shelf_2 right: 4 pins for shelf depth 416, rule 2", "shelf_3 left: 4 pins for shelf depth 416, rule 2", "shelf_4 left: 4 pins for shelf depth 416, rule 2"], "overlap": ["side_right and pin_10 share 118 mm3", "side_right and pin_12 
-- 대화형 1턴 c20_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2", "shelf_2 right: 4 pins for shelf depth 566, rule 2", "shelf_3 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 1턴 c21_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2"]} 
-- 대화형 1턴 c22_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 1턴 c23_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2", "shelf_2 right: 4 pins for shelf depth 546, rule 2", "shelf_3 left: 4 pins for shelf depth 546, rule 2"]} 
-- 대화형 1턴 c24_t1: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 500, rule 2", "shelf_2 left: 4 pins for shelf depth 500, rule 2"]} 
-- 대화형 최종 턴 c01_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 최종 턴 c03_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2"]} 
-- 대화형 최종 턴 c04_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 416, rule 2", "shelf_2 left: 4 pins for shelf depth 416, rule 2"]} 
-- 대화형 최종 턴 c05_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 최종 턴 c06_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2"]} 
-- 대화형 최종 턴 c07_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 536, rule 2", "shelf_2 left: 4 pins for shelf depth 536, rule 2"]} 
-- 대화형 최종 턴 c08_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 최종 턴 c09_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2", "shelf_2 right: 4 pins for shelf depth 566, rule 2", "shelf_3 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 최종 턴 c11_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 366, rule 2", "shelf_2 left: 4 pins for shelf depth 366, rule 2"]} 
-- 대화형 최종 턴 c12_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 최종 턴 c14_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 516, rule 2", "shelf_2 left: 4 pins for shelf depth 516, rule 2"]} 
-- 대화형 최종 턴 c17_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 최종 턴 c19_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins, overlap {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 416, rule 2", "shelf_2 right: 4 pins for shelf depth 416, rule 2", "shelf_3 right: 4 pins for shelf depth 416, rule 2", "shelf_4 left: 4 pins for shelf depth 416, rule 2", "shelf_5 left: 4 pins for shelf depth 416, rule 2"], "overlap": ["side_ri 
-- 대화형 최종 턴 c20_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2", "shelf_2 right: 4 pins for shelf depth 566, rule 2", "shelf_3 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 최종 턴 c21_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2"]} 
-- 대화형 최종 턴 c22_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2"]} 
-- 대화형 최종 턴 c23_t2: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2"]} 
-- 문장 기본 01: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2"]} 
-- 문장 기본 04: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2", "shelf_2 right: 4 pins for shelf depth 566, rule 2", "shelf_3 left: 4 pins for shelf depth 566, rule 2"]} 
-- 문장 기본 05: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 6 pins for shelf depth 616, rule 3", "shelf_2 left: 6 pins for shelf depth 616, rule 3", "shelf_2 right: 6 pins for shelf depth 616, rule 3", "shelf_3 left: 6 pins for shelf depth 616, rule 3"]} 
-- 문장 기본 06: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 6 pins for shelf depth 866, rule 3", "shelf_2 right: 6 pins for shelf depth 866, rule 3", "shelf_3 right: 6 pins for shelf depth 866, rule 3", "shelf_4 left: 6 pins for shelf depth 866, rule 3", "shelf_4 right: 6 pins for shelf depth 866, rule 3"]} 
-- 문장 기본 08: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2"]} 
-- 문장 기본 09: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 566, rule 2", "shelf_2 left: 4 pins for shelf depth 566, rule 2", "shelf_2 right: 4 pins for shelf depth 566, rule 2", "shelf_3 left: 4 pins for shelf depth 566, rule 2", "shelf_3 right: 4 pins for shelf depth 566, rule 2"]} 
-- 문장 기본 10: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 466, rule 2", "shelf_2 right: 4 pins for shelf depth 466, rule 2", "shelf_3 right: 4 pins for shelf depth 466, rule 2", "shelf_4 left: 4 pins for shelf depth 466, rule 2", "shelf_5 left: 4 pins for shelf depth 466, rule 2"]} 
-- 문장 우선순위 01: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2", "shelf_2 right: 4 pins for shelf depth 546, rule 2", "shelf_3 left: 4 pins for shelf depth 546, rule 2"]} 
-- 문장 우선순위 03: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2"]} 
-- 문장 우선순위 04: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 570, rule 2", "shelf_2 left: 4 pins for shelf depth 570, rule 2", "shelf_2 right: 4 pins for shelf depth 570, rule 2", "shelf_3 left: 4 pins for shelf depth 570, rule 2"]} 
-- 문장 우선순위 05: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 right: 4 pins for shelf depth 546, rule 2", "shelf_3 right: 4 pins for shelf depth 546, rule 2", "shelf_4 left: 4 pins for shelf depth 546, rule 2", "shelf_5 left: 4 pins for shelf depth 546, rule 2"]} 
-- 문장 우선순위 06: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 6 pins for shelf depth 616, rule 3", "shelf_2 left: 6 pins for shelf depth 616, rule 3", "shelf_2 right: 6 pins for shelf depth 616, rule 3", "shelf_3 left: 6 pins for shelf depth 616, rule 3"]} 
-- 문장 우선순위 07: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2", "shelf_2 right: 4 pins for shelf depth 546, rule 2", "shelf_3 left: 4 pins for shelf depth 546, rule 2"]} 
-- 문장 우선순위 08: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2"]} 
-- 문장 우선순위 09: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 6 pins for shelf depth 866, rule 3", "shelf_2 left: 6 pins for shelf depth 866, rule 3"]} 
-- 문장 우선순위 10: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 left: 4 pins for shelf depth 546, rule 2", "shelf_2 right: 4 pins for shelf depth 546, rule 2", "shelf_3 left: 4 pins for shelf depth 546, rule 2", "shelf_3 right: 4 pins for shelf depth 546, rule 2"]} 
-- 문장 우선순위 11: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 4 pins for shelf depth 546, rule 2", "shelf_2 right: 4 pins for shelf depth 546, rule 2", "shelf_3 right: 4 pins for shelf depth 546, rule 2", "shelf_4 left: 4 pins for shelf depth 546, rule 2", "shelf_5 left: 4 pins for shelf depth 546, rule 2"]} 
-- 문장 우선순위 12: 정답 채점 통과, 검사기 걸린 규칙 shelf_pins {"shelf_pins": ["shelf_1 right: 6 pins for shelf depth 666, rule 3", "shelf_2 left: 6 pins for shelf depth 666, rule 3", "shelf_2 right: 6 pins for shelf depth 666, rule 3", "shelf_3 left: 6 pins for shelf depth 666, rule 3", "shelf_3 right: 6 pins for shelf depth 666, rule 3"]} 
+- 대화형 1턴 c19_t1: 정답 채점 통과, 검사기 걸린 규칙 overlap {"overlap": ["side_right and pin_10 share 118 mm3", "side_right and pin_12 share 118 mm3", "side_right and pin_14 share 118 mm3", "side_right and pin_16 share 118 mm3", "divider_1 and pin_2 share 118 mm3"]} 
+- 대화형 최종 턴 c19_t2: 정답 채점 통과, 검사기 걸린 규칙 overlap {"overlap": ["side_right and pin_14 share 118 mm3", "side_right and pin_16 share 118 mm3", "side_right and pin_18 share 118 mm3", "side_right and pin_20 share 118 mm3", "side_right and pin_22 share 118 mm3"]} 
 
 검사기가 보지 않는 것: 고객 요청을 제대로 읽었는지(치수, 문 배치 등)와 한쪽문의 경첩 방향 선호(홀수 문의 마지막 문 오른쪽 등)는 규칙이 아니라 요청과 기본값의 문제라 정답 채점에서만 봅니다.
 
