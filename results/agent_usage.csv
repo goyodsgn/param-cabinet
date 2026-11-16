@@ -1,0 +1,9 @@
+id,turn,error,num_turns,seconds,input,cache_write,cache_read,output,api_equivalent_usd,reply
+c01,1,True,1,1,0,0,0,0,0,"API Error: Header '14' has invalid value: 'Bearer [토큰 가림]'"
+c01,2,True,1,1,0,0,0,0,0,"API Error: Header '14' has invalid value: 'Bearer [토큰 가림]'"
+c08,1,True,1,1,0,0,0,0,0,"API Error: Header '14' has invalid value: 'Bearer [토큰 가림]'"
+c08,2,True,1,1,0,0,0,0,0,"API Error: Header '14' has invalid value: 'Bearer [토큰 가림]'"
+c13,1,True,1,1,0,0,0,0,0,"API Error: Header '14' has invalid value: 'Bearer [토큰 가림]'"
+c13,2,True,1,1,0,0,0,0,0,"API Error: Header '14' has invalid value: 'Bearer [토큰 가림]'"
+c21,1,True,1,1,0,0,0,0,0,"API Error: Header '14' has invalid value: 'Bearer [토큰 가림]'"
+c21,2,True,1,1,0,0,0,0,0,"API Error: Header '14' has invalid value: 'Bearer [토큰 가림]'"

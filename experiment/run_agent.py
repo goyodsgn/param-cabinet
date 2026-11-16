@@ -17,6 +17,7 @@ import argparse
 import csv
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -24,6 +25,7 @@ import tempfile
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SECRET = re.compile(r"sk-ant-[A-Za-z0-9_\-]+(?:\s+[A-Za-z0-9_\-]+)*")
 TOOLS = "Read(./**),Edit(./**),Write(./**),Bash(python check.py:*)"
 
 
@@ -34,12 +36,18 @@ def ask(prompt, cwd, system, model, max_turns, session=None):
     if session:
         cmd += ["--resume", session]
     env = dict(os.environ, REPO_ROOT=ROOT)
+    # A token copied from a wrapped terminal line can carry spaces or line breaks
+    if env.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        env["CLAUDE_CODE_OAUTH_TOKEN"] = "".join(env["CLAUDE_CODE_OAUTH_TOKEN"].split())
     t0 = time.time()
     r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, env=env, timeout=1200)
     try:
         out = json.loads(r.stdout.strip().splitlines()[-1])
     except Exception:  # noqa: BLE001
         out = {"is_error": True, "result": (r.stderr or r.stdout)[-500:]}
+    for key in ("result",):
+        if isinstance(out.get(key), str):
+            out[key] = SECRET.sub("[token hidden]", out[key])
     out["_seconds"] = round(time.time() - t0)
     return out
 
