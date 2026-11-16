@@ -1,6 +1,8 @@
 """General rule checker: measures the company rules directly on any cabinet's parts, without a reference
 model. Only the part names (door_, shelf_, pin_, leg_, divider_, ...) and the geometry are used, so it works
 for product types that have no answer key (tall cabinets, wall cabinets, drawers, ...).
+Drawer fronts (drawer_front_*) get the door gap check but no hinge or 600 cell check; other drawer_* parts
+are the drawer boxes and do not count as carcass.
 
 usage: python experiment/rule_check.py MODEL.py      -> prints one JSON object
        from rule_check import check_parts; check_parts(parts)
@@ -38,6 +40,9 @@ def hinge_rule(h):
 
 
 def kind(name):
+    # Drawers: the front is checked like a door for gaps (no hinges, no 600 cell); the box is not carcass
+    if name.startswith("drawer"):
+        return "front" if "front" in name else "drawer"
     for k in ("door", "shelf", "pin", "leg", "divider"):
         if name.startswith(k):
             return k
@@ -92,7 +97,8 @@ def check_parts(parts):
     C = {"x0": min(b["x0"] for b in body), "x1": max(b["x1"] for b in body),
          "y0": min(b["y0"] for b in body), "y1": max(b["y1"] for b in body),
          "z0": min(b["z0"] for b in body), "z1": max(b["z1"] for b in body)}
-    doors = sorted([(n, s, b) for n, s, k, b in P if k == "door"], key=lambda d: (d[2]["z0"], d[2]["x0"]))
+    doors = sorted([(n, s, b) for n, s, k, b in P if k in ("door", "front")], key=lambda d: (d[2]["z0"], d[2]["x0"]))
+    fronts = {n for n, s, k, b in P if k == "front"}
     walls = [b for n, s, k, b in P if k in ("divider", "panel")]
 
     # Doors: cell width, gaps, hinges
@@ -101,7 +107,7 @@ def check_parts(parts):
     sides = {}
     for n, s, b in doors:
         w, h = b["x1"] - b["x0"], b["z1"] - b["z0"]
-        if w + 2 * GAP > CELL_MAX + TOL:
+        if n not in fronts and w + 2 * GAP > CELL_MAX + TOL:
             fail("door_cell", f"{n}: cell {w + 2 * GAP:.0f} > {CELL_MAX:.0f}")
         if abs(b["y1"] - (C["y0"] - GAP)) > TOL:
             fail("door_gap", f"{n}: back face {C['y0'] - b['y1']:.1f} from carcass, not {GAP:.0f}")
@@ -123,6 +129,8 @@ def check_parts(parts):
                 d = (outline - edge) * sign
                 if abs(d - GAP) > TOL:
                     fail("door_gap", f"{n} {side}: {d:.1f} to the carcass edge, not {GAP:.0f}")
+        if n in fronts:
+            continue
         cups = cups_of(s)
         need = hinge_rule(h)
         if len(cups) != need:
@@ -138,8 +146,9 @@ def check_parts(parts):
             if len(zs) >= 2 and (abs(zs[0] - (b["z0"] + CUP_END)) > TOL or abs(zs[-1] - (b["z1"] - CUP_END)) > TOL):
                 fail("hinge_place", f"{n}: end cups not {CUP_END:.0f} from top/bottom")
     # Pairs: two side-by-side doors with no inner wall behind the joint must open left | right
-    for i, (n, _, b) in enumerate(doors):
-        for m, _, c in doors[i + 1:]:
+    hinged = [d for d in doors if d[0] not in fronts]
+    for i, (n, _, b) in enumerate(hinged):
+        for m, _, c in hinged[i + 1:]:
             if overlap_1d(b["z0"], b["z1"], c["z0"], c["z1"]) <= TOL or abs(c["x0"] - b["x1"] - 2 * GAP) > TOL:
                 continue
             joint = (b["x1"] + c["x0"]) / 2
@@ -228,7 +237,7 @@ def check_parts(parts):
     absolute = ("door_cell", "door_gap", "hinge_count", "shelf_pins", "leg_spacing")
     return {"pass": all(res.values()), "absolute_pass": all(res.get(r, True) for r in absolute),
             "rules": res, "messages": {k: v[:5] for k, v in msgs.items()},
-            "counts": {"doors": len(doors), "shelves": sum(k == "shelf" for _, _, k, _ in P),
+            "counts": {"doors": len(doors) - len(fronts), "drawers": len(fronts), "shelves": sum(k == "shelf" for _, _, k, _ in P),
                        "pins": len(pins), "legs": len(legs)}}
 
 
