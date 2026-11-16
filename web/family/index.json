@@ -1,0 +1,122 @@
+[
+ {
+  "file": "f1_tall_t1.json",
+  "family": "f1_tall",
+  "name": "키큰장",
+  "turn": 1,
+  "size": [
+   600,
+   600,
+   2100
+  ],
+  "pass": true
+ },
+ {
+  "file": "f1_tall_t2.json",
+  "family": "f1_tall",
+  "name": "키큰장",
+  "turn": 2,
+  "size": [
+   900,
+   600,
+   2100
+  ],
+  "pass": true
+ },
+ {
+  "file": "f2_wall_t1.json",
+  "family": "f2_wall",
+  "name": "상부장",
+  "turn": 1,
+  "size": [
+   1200,
+   350,
+   700
+  ],
+  "pass": true
+ },
+ {
+  "file": "f2_wall_t2.json",
+  "family": "f2_wall",
+  "name": "상부장",
+  "turn": 2,
+  "size": [
+   1200,
+   350,
+   900
+  ],
+  "pass": true
+ },
+ {
+  "file": "f3_open_t1.json",
+  "family": "f3_open",
+  "name": "오픈 선반",
+  "turn": 1,
+  "size": [
+   800,
+   300,
+   1800
+  ],
+  "pass": true
+ },
+ {
+  "file": "f3_open_t2.json",
+  "family": "f3_open",
+  "name": "오픈 선반",
+  "turn": 2,
+  "size": [
+   1400,
+   300,
+   1800
+  ],
+  "pass": true
+ },
+ {
+  "file": "f4_drawer_t1.json",
+  "family": "f4_drawer",
+  "name": "서랍장",
+  "turn": 1,
+  "size": [
+   600,
+   580,
+   850
+  ],
+  "pass": true
+ },
+ {
+  "file": "f4_drawer_t2.json",
+  "family": "f4_drawer",
+  "name": "서랍장",
+  "turn": 2,
+  "size": [
+   900,
+   580,
+   850
+  ],
+  "pass": true
+ },
+ {
+  "file": "f5_corner_t1.json",
+  "family": "f5_corner",
+  "name": "코너장",
+  "turn": 1,
+  "size": [
+   900,
+   900,
+   850
+  ],
+  "pass": true
+ },
+ {
+  "file": "f5_corner_t2.json",
+  "family": "f5_corner",
+  "name": "코너장",
+  "turn": 2,
+  "size": [
+   1000,
+   1000,
+   850
+  ],
+  "pass": true
+ }
+]
