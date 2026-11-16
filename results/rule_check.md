@@ -1,6 +1,6 @@
 # 범용 규칙 검사기 검증
 
-정답 모델 없이 형상만 재서 회사 규칙을 검사합니다. 아래 세 가지로 검사기가 믿을 만한지 확인했습니다.
+정답 모델 없이 형상만 재서 설계 규칙을 검사합니다. 아래 세 가지로 검사기가 믿을 만한지 확인했습니다.
 
 ## 1. 규칙을 지킨 캐비닛 (전부 통과해야 함)
 
@@ -47,6 +47,8 @@
 
 - 대화형 1턴 c19_t1: 정답 채점 통과, 검사기 걸린 규칙 overlap {"overlap": ["side_right and pin_10 share 118 mm3", "side_right and pin_12 share 118 mm3", "side_right and pin_14 share 118 mm3", "side_right and pin_16 share 118 mm3", "divider_1 and pin_2 share 118 mm3"]} 
 - 대화형 최종 턴 c19_t2: 정답 채점 통과, 검사기 걸린 규칙 overlap {"overlap": ["side_right and pin_14 share 118 mm3", "side_right and pin_16 share 118 mm3", "side_right and pin_18 share 118 mm3", "side_right and pin_20 share 118 mm3", "side_right and pin_22 share 118 mm3"]} 
+
+확인 결과: c19는 검사기가 맞습니다. 오른쪽 판의 다보 구멍을 2mm만 파고 다보는 8mm를 꽂아서, 다보 6mm가 판재 속에 묻혀 있습니다. 정답 채점은 구멍 위치를 보지 않아 놓친 실제 오류입니다.
 
 검사기가 보지 않는 것: 고객 요청을 제대로 읽었는지(치수, 문 배치 등)와 한쪽문의 경첩 방향 선호(홀수 문의 마지막 문 오른쪽 등)는 규칙이 아니라 요청과 기본값의 문제라 정답 채점에서만 봅니다.
 
