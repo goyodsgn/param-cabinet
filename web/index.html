@@ -89,12 +89,13 @@ const T = EN ? {
   note: "Depth 600 mm. No top panel: the worktop is fitted later, so only a front top rail. Doors, hinges, walls, shelves and legs follow the design rules of one parametric model.",
   updated: (d, r) => `Latest version: ${d}${r ? " (" + r + ")" : ""}`,
   credit: `<a href="https://jeongyeon.framer.website/en/project/ai-parametric-cabinet-live" target="_top">Jeongyeon Kim · AI parametric cabinet research</a>`,
-  product: "Product", base: "Base cabinet", size: "Size (agent's two versions)", fronts: "Doors / drawer fronts",
-  frontState: { show: "Shown", hide: "Hidden" },
+  product: "Product", base: "Base cabinet", fronts: "Doors / drawers", drawers: "Drawers", doorSide: "Door",
+  sides: { left: "Left", right: "Right" }, rows: (n) => `${n} rows`,
+  check: (ok, f) => ok ? "Rule checker: passed" : `Rule checker: failed (${f.join(", ")})`,
   names: { f1_tall: "Tall cabinet", f2_wall: "Wall cabinet", f3_open: "Open shelf", f4_drawer: "Drawers", f5_corner: "Corner cabinet" },
   famInfo: (c) => `<b>${c.doors ?? 0}</b> doors · <b>${c.drawers ?? 0}</b> drawers · <b>${c.shelves ?? 0}</b> shelves · <b>${c.legs ?? 0}</b> legs`,
-  famNote: "Built by the AI agent from the design rulebook written for base cabinets (few or no rules for this product). Checked by the rule checker.",
-  customer: "Customer", notes: "What the agent decided (in Korean)",
+  famNote: "Built by the AI agent from the design rulebook written for base cabinets (few or no rules for this product). Every size here is the agent's code run at that size and checked by the rule checker.",
+  notes: "What the agent decided (in Korean)",
 } : {
   width: "폭", height: "높이", top: "상판", layout: "문 배치", door: "문",
   tops: { inset: "측판 사이", onset: "위를 덮음", none: "없음 (싱크대)" },
@@ -104,18 +105,19 @@ const T = EN ? {
   note: "깊이 600mm. 상판은 나중에 쿡탑·싱크 위치에 맞춰 올리므로 앞 가로대만 있습니다. 문, 힌지, 칸막이, 선반, 다릿발은 하나의 파라메트릭 모델에 정해 둔 설계 규칙에 따라 바뀝니다.",
   updated: (d, r) => `최신 버전: ${d}${r ? " (" + r + ")" : ""}`,
   credit: `<a href="https://jeongyeon.framer.website/project/ai-parametric-cabinet-live" target="_top">김정연 · AI 파라메트릭 하부장 연구</a>`,
-  product: "제품", base: "하부장", size: "크기 (에이전트가 만든 두 버전)", fronts: "문·서랍 앞판",
-  frontState: { show: "보임", hide: "숨김" },
+  product: "제품", base: "하부장", fronts: "문·서랍", drawers: "서랍", doorSide: "문 위치",
+  sides: { left: "왼쪽", right: "오른쪽" }, rows: (n) => `${n}단`,
+  check: (ok, f) => ok ? "규칙 검사: 통과" : `규칙 검사: 걸림 (${f.join(", ")})`,
   names: {},
   famInfo: (c) => `문 <b>${c.doors ?? 0}</b>짝 · 서랍 <b>${c.drawers ?? 0}</b>개 · 선반 <b>${c.shelves ?? 0}</b>개 · 다릿발 <b>${c.legs ?? 0}</b>개`,
-  famNote: "하부장용으로 쓴 설계 규칙서만 보고 AI 에이전트가 만든 모델입니다(이 제품 규칙은 없거나 적음). 규칙 검사기로 확인했습니다.",
-  customer: "고객", notes: "에이전트가 스스로 정한 것",
+  famNote: "하부장용으로 쓴 설계 규칙서만 보고 AI 에이전트가 만든 모델입니다(이 제품 규칙은 없거나 적음). 크기마다 에이전트 코드를 그 크기로 실행하고 규칙 검사기로 확인했습니다.",
+  notes: "에이전트가 스스로 정한 것",
 };
 
-const state = { W: 1500, H: 850, D: 600, top: "rail", layout: "left", open: false, product: "base", turn: 2, fronts: "show" };
+const state = { W: 1500, H: 850, D: 600, top: "rail", layout: "left", open: false, product: "base" };
+const famValues = {};
 let version = {};
 let famIndex = [];
-const famCache = {};
 
 // ---------- three.js scene ----------
 const view = document.getElementById("view");
@@ -205,13 +207,12 @@ function clearGroup() {
   }
 }
 
-// a model the agent made: meshes in cabinet mm coordinates, shown as they are
+// a model the agent made: meshes in cabinet mm coordinates; doors turn on their hinge edge, drawers slide out
 function buildFamily(item) {
   clearGroup();
   group = new THREE.Group();
   const [x0, y0, , x1, y1] = item.box;
   for (const part of item.parts) {
-    if (part.m === "front" && state.fronts === "hide") continue;
     const pos = new Float32Array(part.v.length);
     for (let i = 0; i < part.v.length; i += 3) {
       pos[i] = part.v[i] * S; pos[i + 1] = part.v[i + 2] * S; pos[i + 2] = -part.v[i + 1] * S;
@@ -225,7 +226,6 @@ function buildFamily(item) {
     if (part.m === "front") {
       geo.computeBoundingBox();
       const b = geo.boundingBox;
-      // planar UVs on the front face so the oak grain runs up the door
       const uv = new Float32Array((pos.length / 3) * 2);
       const wide = (b.max.x - b.min.x) >= (b.max.z - b.min.z);
       for (let i = 0, j = 0; i < pos.length; i += 3, j += 2) {
@@ -235,10 +235,25 @@ function buildFamily(item) {
       geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
       mat = oakMaterial(600, 600);
     }
+    let holder = group;
+    const o = part.o;
+    if (o && state.open && o.t === "hinge") {
+      const pivot = new THREE.Group();
+      pivot.position.set(o.x * S, 0, -o.y * S);
+      pivot.rotation.y = ((o.side === "left" ? -95 : 95) * Math.PI) / 180;
+      holder = new THREE.Group();
+      holder.position.set(-o.x * S, 0, o.y * S);
+      pivot.add(holder);
+      group.add(pivot);
+    } else if (o && state.open && o.t === "slide") {
+      holder = new THREE.Group();
+      holder.position.z = o.d * S;
+      group.add(holder);
+    }
     const m = new THREE.Mesh(geo, mat);
     m.castShadow = m.receiveShadow = true;
-    group.add(m);
-    if (part.m !== "pin") group.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), M.line));
+    holder.add(m);
+    if (part.m !== "pin") holder.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), M.line));
   }
   group.position.x = (-(x0 + x1) / 2) * S;
   group.position.z = ((y0 + y1) / 2) * S;
@@ -354,10 +369,7 @@ function slider(title, key, min, max, step) {
 let shownDoors = -1;
 function famName(f) { return T.names[f.family] || f.name; }
 function productSeg() {
-  const seen = [];
-  for (const f of famIndex) if (!seen.find((x) => x.family === f.family)) seen.push(f);
-  const g = seg(T.product, "product", [["base", T.base], ...seen.map((f) => [f.family, famName(f)])]);
-  return g;
+  return seg(T.product, "product", [["base", T.base], ...famIndex.map((f) => [f.family, famName(f)])]);
 }
 function controlsFor(L) {
   const c = document.getElementById("controls");
@@ -372,28 +384,64 @@ function controlsFor(L) {
   shownDoors = L.n;
 }
 
-function famControls() {
+function famEntry() { return famIndex.find((f) => f.family === state.product); }
+function famKey(f, v) { return Object.keys(f.axes).map((k) => `${k}-${v[k]}`).join("_"); }
+function stepSlider(title, f, k) {
+  const vals = f.axes[k], v = famValues[f.family];
+  const g = document.createElement("div");
+  g.className = "group";
+  g.innerHTML = `<span class="label">${title}<span>${v[k]} mm</span></span><input type="range" min="${vals[0]}" max="${vals[vals.length - 1]}" step="${vals[1] - vals[0]}" value="${v[k]}">`;
+  const input = g.querySelector("input"), out = g.querySelector(".label span");
+  input.addEventListener("input", () => {
+    const x = vals.reduce((a, b) => (Math.abs(b - input.value) < Math.abs(a - input.value) ? b : a));
+    out.textContent = `${x} mm`;
+    if (x !== v[k]) { v[k] = x; updateFamily(false); }
+  });
+  return g;
+}
+function valueSeg(title, f, k, label) {
+  const v = famValues[f.family];
+  const g = document.createElement("div");
+  g.className = "group";
+  g.innerHTML = `<span class="label">${title}</span><div class="seg"></div>`;
+  for (const x of f.axes[k]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label(x);
+    b.setAttribute("aria-pressed", String(v[k] === x));
+    b.addEventListener("click", () => { v[k] = x; updateFamily(); });
+    g.querySelector(".seg").appendChild(b);
+  }
+  return g;
+}
+function famControls(f) {
   const c = document.getElementById("controls");
   c.innerHTML = "";
   c.appendChild(productSeg());
-  const turns = famIndex.filter((f) => f.family === state.product);
-  c.appendChild(seg(T.size, "turn", turns.map((f) => [f.turn, f.size[0] + " × " + f.size[1] + " × " + f.size[2]])));
-  c.appendChild(seg(T.fronts, "fronts", [["show", T.frontState.show], ["hide", T.frontState.hide]]));
+  if (f.axes.W) c.appendChild(stepSlider(T.width, f, "W"));
+  if (f.axes.H) c.appendChild(stepSlider(T.height, f, "H"));
+  if (f.axes.n_drawers) c.appendChild(valueSeg(T.drawers, f, "n_drawers", T.rows));
+  if (f.axes.door_side) c.appendChild(valueSeg(T.doorSide, f, "door_side", (x) => T.sides[x]));
+  c.appendChild(seg(T.fronts, "open", [[false, T.doorState.closed], [true, T.doorState.open]]));
 }
-async function updateFamily() {
-  const entry = famIndex.find((f) => f.family === state.product && f.turn === state.turn) ||
-    famIndex.find((f) => f.family === state.product);
-  state.turn = entry.turn;
-  if (!famCache[entry.file]) famCache[entry.file] = await fetch("family/" + entry.file).then((r) => r.json());
-  const item = famCache[entry.file];
+const famCache = {};
+let famToken = 0;
+async function updateFamily(redrawControls = true) {
+  const f = famEntry();
+  if (!famValues[f.family]) famValues[f.family] = { ...f.default };
+  const key = famKey(f, famValues[f.family]);
+  const url = `family/${f.family}/${key}.json`;
+  const token = ++famToken;
+  if (!famCache[url]) famCache[url] = await fetch(url).then((r) => r.json());
+  if (token !== famToken) return; // a newer choice arrived while loading
+  const item = famCache[url];
   buildFamily(item);
   frame(item.box[3] - item.box[0], item.box[5] - item.box[2]);
-  famControls();
+  if (redrawControls) famControls(f);
   const esc = (x) => String(x).replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[ch]);
-  document.getElementById("info").innerHTML = T.famInfo(item.counts) +
+  document.getElementById("info").innerHTML = T.famInfo(item.counts) + " · " + T.check(item.pass, item.failed) +
     `<span class="note"><br>${T.famNote}</span>` +
-    `<br>${T.customer}: ` + item.customer.map((q) => `“${esc(q)}”`).join(" → ") +
-    (item.notes.length ? `<details><summary>${T.notes}</summary><ul>${item.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul></details>` : "") +
+    (f.notes.length ? `<details><summary>${T.notes}</summary><ul>${f.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul></details>` : "") +
     (version.updated ? "<br>" + T.updated(version.updated, version.rev) + " · " : "<br>") + T.credit;
 }
 
