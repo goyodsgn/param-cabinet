@@ -11,6 +11,7 @@ import json
 import os
 import subprocess
 import sys
+import criteria  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHECKS = ["params", "absolute_rules", "solids", "carcass_parts", "top_panel", "back_panel", "overall_size",
@@ -104,7 +105,7 @@ def main():
     if notes:
         lines += ["", "Notes the model wrote:", ""]
         lines += [f"- {r['id']}: {r['notes']}" for r in notes]
-    open(os.path.join(ROOT, args.out + ".md"), "w", encoding="utf-8").write("\n".join(lines) + "\n")
+    open(os.path.join(ROOT, args.out + ".md"), "w", encoding="utf-8").write("\n".join(criteria.stamp(lines, os.path.basename(args.out))) + "\n")
 
 
 if __name__ == "__main__":

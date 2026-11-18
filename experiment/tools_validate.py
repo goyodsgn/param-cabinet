@@ -14,6 +14,7 @@ import json
 import os
 import subprocess
 import sys
+import criteria  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -169,7 +170,7 @@ def main():
         md.append("- AI가 만든 모델 c12 최종: `results/cutlist/ai_c12_final.md`")
     md += ["", "엣지 판단 근거 (규칙을 받지 않고 기존 규칙에서 추론):", ""]
     md += [f"{i}. {t}" for i, t in enumerate(EDGE_RULES, 1)]
-    open(os.path.join(ROOT, "results", "rule_check.md"), "w", encoding="utf-8").write("\n".join(md) + "\n")
+    open(os.path.join(ROOT, "results", "rule_check.md"), "w", encoding="utf-8").write("\n".join(criteria.stamp(md, "rule_check")) + "\n")
 
 
 if __name__ == "__main__":

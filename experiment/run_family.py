@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import criteria  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "experiment"))
@@ -108,7 +109,7 @@ def write_report(rows, model):
     for r in rows:
         if r["turn"] == 2:
             md += [f"### {r['family']}", ""] + [f"- {n}" for n in r["notes"]] + [""]
-    open(os.path.join(ROOT, "results", "family.md"), "w", encoding="utf-8").write("\n".join(md) + "\n")
+    open(os.path.join(ROOT, "results", "family.md"), "w", encoding="utf-8").write("\n".join(criteria.stamp(md, "family")) + "\n")
 
 
 def regrade(model):

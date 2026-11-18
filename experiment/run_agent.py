@@ -23,6 +23,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import criteria  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET = re.compile(r"sk-ant-[A-Za-z0-9_\-]+(?:\s+[A-Za-z0-9_\-]+)*")
@@ -111,7 +112,7 @@ def main():
           "| id | 턴 | 단계 | 초 | 입력 | 캐시 읽기 | 출력 | API 환산 달러 | 오류 |", "|---|---|---|---|---|---|---|---|---|"]
     md += [f"| {r['id']} | {r['turn']} | {r['num_turns']} | {r['seconds']} | {r['input']:,} | {r['cache_read']:,} | "
            f"{r['output']:,} | {(r['api_equivalent_usd'] or 0):.3f} | {'O' if r['error'] else ''} |" for r in rows]
-    open(os.path.join(ROOT, "results", "agent_usage.md"), "w", encoding="utf-8").write("\n".join(md) + "\n")
+    open(os.path.join(ROOT, "results", "agent_usage.md"), "w", encoding="utf-8").write("\n".join(criteria.stamp(md, "agent_usage")) + "\n")
 
 
 if __name__ == "__main__":

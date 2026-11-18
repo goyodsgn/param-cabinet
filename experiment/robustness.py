@@ -15,6 +15,7 @@ import os
 import random
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import criteria  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -150,7 +151,7 @@ def main():
         for r in examples:
             lines.append(f"| {r['model']} | {r['W']} | {r['H']} | {r['D']} | {r['leg_h']} | {r['back_mode']} | "
                          f"{r['failed']} | {r['error'][:60].replace('|', '/')} |")
-    open(os.path.join(ROOT, args.out + ".md"), "w", encoding="utf-8").write("\n".join(lines) + "\n")
+    open(os.path.join(ROOT, args.out + ".md"), "w", encoding="utf-8").write("\n".join(criteria.stamp(lines, "step4")) + "\n")
 
 
 if __name__ == "__main__":
