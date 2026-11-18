@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI 파라메트릭 하부장 3D | Parametric Cabinet by Jeongyeon Kim</title>
-<meta name="description" content="폭·높이·상판·문 배치를 바꾸면 설계 규칙에 따라 문, 힌지, 칸막이, 선반, 다릿발이 바뀌는 파라메트릭 하부장 3D. 같은 규칙으로 AI 에이전트가 만든 키큰장, 상부장, 오픈 선반, 서랍장, 코너장도 볼 수 있습니다. AI(Claude)와 CadQuery로 만드는 김정연(Jeongyeon Kim)의 연구 결과물입니다.">
+<meta name="description" content="폭·높이·문 배치를 바꾸면 설계 규칙에 따라 문, 힌지, 칸막이, 선반, 다릿발이 바뀌는 파라메트릭 하부장 3D. 같은 규칙으로 AI 에이전트가 만든 키큰장, 상부장, 오픈 선반, 서랍장, 코너장도 볼 수 있습니다. AI(Claude)와 CadQuery로 만드는 김정연(Jeongyeon Kim)의 연구 결과물입니다.">
 <meta name="author" content="Jeongyeon Kim (김정연)">
 <link rel="canonical" href="https://goyodsgn.github.io/param-cabinet/">
 <meta property="og:type" content="website">
@@ -86,7 +86,7 @@ const T = EN ? {
   layouts: { single: "All single doors", pair: "Double doors", left: "Single door on the left", right: "Single door on the right" },
   doorState: { closed: "Closed", open: "Open" },
   info: (L) => `<b>${L.n}</b> doors · <b>${L.nh}</b> hinges each · <b>${L.dividers.length}</b> inner walls · <b>${L.nShelves * L.bays.length}</b> shelves · <b>${L.legs.length}</b> legs`,
-  note: "Depth 600 mm. Doors, hinges, walls, shelves and legs follow the design rules of one parametric model.",
+  note: "Depth 600 mm. No top panel: the worktop is fitted later, so only a front top rail. Doors, hinges, walls, shelves and legs follow the design rules of one parametric model.",
   updated: (d, r) => `Latest version: ${d}${r ? " (" + r + ")" : ""}`,
   credit: `<a href="https://jeongyeon.framer.website/en/project/ai-parametric-cabinet-live" target="_top">Jeongyeon Kim · AI parametric cabinet research</a>`,
   product: "Product", base: "Base cabinet", size: "Size (agent's two versions)", fronts: "Doors / drawer fronts",
@@ -101,7 +101,7 @@ const T = EN ? {
   layouts: { single: "모두 단일 도어", pair: "양문", left: "왼쪽 단일 도어", right: "오른쪽 단일 도어" },
   doorState: { closed: "닫힘", open: "열림" },
   info: (L) => `문 <b>${L.n}</b>짝 · 문마다 힌지 <b>${L.nh}</b>개 · 칸막이 <b>${L.dividers.length}</b>개 · 선반 <b>${L.nShelves * L.bays.length}</b>개 · 다릿발 <b>${L.legs.length}</b>개`,
-  note: "깊이 600mm. 문, 힌지, 칸막이, 선반, 다릿발은 하나의 파라메트릭 모델에 정해 둔 설계 규칙에 따라 바뀝니다.",
+  note: "깊이 600mm. 상판은 나중에 쿡탑·싱크 위치에 맞춰 올리므로 앞 가로대만 있습니다. 문, 힌지, 칸막이, 선반, 다릿발은 하나의 파라메트릭 모델에 정해 둔 설계 규칙에 따라 바뀝니다.",
   updated: (d, r) => `최신 버전: ${d}${r ? " (" + r + ")" : ""}`,
   credit: `<a href="https://jeongyeon.framer.website/project/ai-parametric-cabinet-live" target="_top">김정연 · AI 파라메트릭 하부장 연구</a>`,
   product: "제품", base: "하부장", size: "크기 (에이전트가 만든 두 버전)", fronts: "문·서랍 앞판",
@@ -112,7 +112,7 @@ const T = EN ? {
   customer: "고객", notes: "에이전트가 스스로 정한 것",
 };
 
-const state = { W: 1500, H: 850, D: 600, top: "onset", layout: "left", open: false, product: "base", turn: 2, fronts: "show" };
+const state = { W: 1500, H: 850, D: 600, top: "rail", layout: "left", open: false, product: "base", turn: 2, fronts: "show" };
 let version = {};
 let famIndex = [];
 const famCache = {};
@@ -257,12 +257,12 @@ function build() {
   clearGroup();
   group = new THREE.Group();
   const bodyD = L.Dc - p.back_t;
-  const sideH = state.top === "onset" ? L.Hc - t : L.Hc;
+  const sideH = L.Hc;
   box(group, M.body, 0, 0, L.z0, t, bodyD, sideH);
   box(group, M.body, p.W - t, 0, L.z0, t, bodyD, sideH);
   box(group, M.body, t, 0, L.z0, p.W - 2 * t, bodyD, t);
-  if (state.top === "inset") box(group, M.body, t, 0, L.z0 + L.Hc - t, p.W - 2 * t, bodyD, t);
-  if (state.top === "onset") box(group, M.body, 0, 0, L.z0 + L.Hc - t, p.W, bodyD, t);
+  // base cabinets have no top panel (the worktop goes on later): a front top rail only
+  box(group, M.body, t, 0, L.z0 + L.Hc - t, p.W - 2 * t, p.rail_d, t);
   box(group, M.body, 0, L.Dc - p.back_t, L.z0, p.W, p.back_t, L.Hc);
   for (const [x0, x1] of L.dividers) box(group, M.body, x0, 0, L.innerBottom, x1 - x0, L.innerBack, L.clearH);
   for (const [x0, x1] of L.bays) for (const zb of L.shelfZ)
@@ -365,7 +365,6 @@ function controlsFor(L) {
   if (famIndex.length) c.appendChild(productSeg());
   c.appendChild(slider(T.width, "W", 450, 1800, 10));
   c.appendChild(slider(T.height, "H", 600, 2000, 10));
-  c.appendChild(seg(T.top, "top", ["inset", "onset", "none"].map((k) => [k, T.tops[k]])));
   const lay = seg(T.layout, "layout", layoutOptions(L.n).map((o) => [o.key, T.layouts[o.key]]));
   lay.id = "layoutGroup";
   c.appendChild(lay);

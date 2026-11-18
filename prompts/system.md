@@ -21,7 +21,7 @@ again (not a diff), keeping everything they asked for earlier unless they change
 - `import cadquery as cq` at the top. No other third-party imports. No file I/O.
 - Define `PARAMS`, a dict with every dimension and rule value, using exactly these key names (add more
   keys if you need them):
-  `W`, `H`, `D`, `leg_h`, `back_mode` ("onset" or "inset"), `top_mode` ("inset", "onset" or "none"),
+  `W`, `H`, `D`, `leg_h`, `back_mode` ("onset" or "inset"), `top_mode` ("rail", "none", "inset" or "onset"), `rail_d`,
   `t`, `back_t`, `divider_t`, `door_t`, `shelf_t`, `door_gap`, `door_max_w`, `n_doors` (None = automatic),
   `door_layout` (list or None), `single_door_hinge` ("left", "right" or None), `n_shelves` (None = automatic), `shelf_min_gap`,
   `bottom_clear_min` (number or None), `pin_max_spacing`, `leg_max_spacing`,
@@ -29,7 +29,7 @@ again (not a diff), keeping everything they asked for earlier unless they change
   Set them from the customer's request and the company defaults.
 - Define `build(params: dict) -> list[tuple[str, cq.Solid]]`, returning every part as (name, solid).
   Read every value from `params`; do not read module-level constants inside `build`.
-- Part names: `side_left`, `side_right`, `top`, `bottom`, `back`, `divider_1`, ..., `shelf_1`, ...,
+- Part names: `side_left`, `side_right`, `top_rail` (or `top`), `bottom`, `back`, `blind_panel` (corner cabinet), `divider_1`, ..., `shelf_1`, ...,
   `pin_1`, ..., `door_1`, ..., `leg_1`, ...
 
 ## Size and coordinates (mm)
@@ -40,8 +40,8 @@ The doors hang in front: door back face at y = -door_gap, front face at y = -(do
 
 Inner sizes (when a customer gives 내경 / inside sizes, convert them to W, H, D):
 - inner width = W - 2 * t (between the side panels)
-- inner height = clear height between the bottom panel and the top panel = H - leg_h - 2 * t
-  (with no top panel: H - leg_h - t)
+- inner height = clear height between the bottom panel and the top rail (or top panel) = H - leg_h - 2 * t
+  (with nothing on top, top_mode "none": H - leg_h - t)
 - inner depth = from the carcass front to the back panel's inner face = Dc - back_t
 Customers rarely mention legs; keep leg_h at the default unless they do.
 
@@ -51,17 +51,28 @@ door door_t = 22, shelf shelf_t = 30.
 
 Carcass joinery
 - The bottom panel sits between the sides, at z = leg_h .. leg_h + t.
-- top_mode "inset" (default): the top panel sits between the sides (W - 2t wide, at the carcass top) and
-  the sides run the full carcass height.
-- top_mode "onset" (customer: "상판이 위를 덮게", top covers the sides): the top panel is W wide and
-  covers the top of the sides; the sides run from leg_h to H - t.
-- top_mode "none" (customer installs a sink, "싱크대", or asks for no top): no top panel at all. The sides,
-  the back and the inner walls run up to the carcass top (z = H); there is no part named `top`.
+- Base cabinets (하부장) get NO top panel: the worktop is fitted later on site, where the cooktop and the
+  sink go. There is no part named `top`.
+- top_mode "rail" (default): a front top rail `top_rail`, t thick and rail_d = 100 deep, lies flat between
+  the sides at the carcass top, flush with the carcass front: x = t .. W - t, y = 0 .. rail_d,
+  z = H - t .. H. The sides run the full carcass height.
+- top_mode "none" (customer installs a sink, "싱크대", or asks for nothing on top): no rail either. The
+  sides, the back and the inner walls run up to the carcass top (z = H).
+- top_mode "inset" / "onset" are only for general storage cabinets that do get a top panel (not base
+  cabinets): "inset" puts the top panel between the sides (W - 2t wide), "onset" makes it W wide over the
+  sides (the sides then run from leg_h to H - t).
 - back_mode "onset" (default): the back panel covers the rear of sides, top and bottom: it is W wide and
   full carcass height, at y = Dc - back_t .. Dc. Sides, top and bottom are Dc - back_t deep.
-- back_mode "inset": the back panel fits between the sides and between the bottom and the top panel
-  (up to the carcass top when there is no top), flush with their rear edges, at y = Dc - back_t .. Dc.
+- back_mode "inset": the back panel fits between the sides, from the bottom panel up to the carcass top
+  (with "rail" or "none"; under the top panel with "inset" / "onset"), flush with their rear edges, at y = Dc - back_t .. Dc.
   Sides, top and bottom are Dc deep.
+
+Corner base cabinet (코너장)
+- A corner cabinet is a straight box like any base cabinet, not an L shape. In an L-shaped kitchen a
+  normal base cabinet butts against its front at a right angle, which makes the L.
+- One side of its front gets the door; the other side, hidden behind the neighbouring cabinet, is closed
+  with a fixed white `blind_panel` (no hinges). There are two versions: door on the left, door on the right.
+- Like every base cabinet it has no top panel.
 
 Doors (onset: they cover the whole carcass front)
 - Door count n = ceil(W / door_max_w), door_max_w = 600, at least 1. A customer may ask for MORE doors
@@ -98,11 +109,11 @@ Inner walls
 - Default: one inner vertical wall behind every joint between two doors (n - 1 walls), centered on
   x = j * W / n. With door_layout: one wall between neighbouring bays (see above).
   The walls always follow the actual doors.
-- Wall height = the clear height (from the bottom panel up to the top panel, or up to the carcass top
-  with no top), depth from y = 0 to the back panel's inner face (Dc - back_t).
+- Wall height = the clear height (from the bottom panel up to the underside of the top rail or top panel,
+  or up to the carcass top with "none"), depth from y = 0 to the back panel's inner face (Dc - back_t).
 
 Shelves (one set in every bay; a bay is the space between two neighbouring vertical panels)
-- Clear height = carcass height - 2 * t (carcass height - t with no top panel). Use the largest shelf
+- Clear height = carcass height - 2 * t (carcass height - t with "none"). Use the largest shelf
   count k such that every space between shelves (and between a shelf and the top or bottom panel) stays
   at least shelf_min_gap = 320 high: k = max(0, floor((clear_h - 320) / (320 + shelf_t))).
   Spread the shelves evenly.
@@ -133,4 +144,4 @@ Legs (cylinders under the carcass, from z = 0 to leg_h)
   distance between the two corner leg centers on that line. The legs form a grid.
 
 Defaults when the user says nothing: W 1200, H 850, D 580, leg_h 100, back_mode "onset",
-top_mode "inset", door_layout None, bottom_clear_min None.
+top_mode "rail", door_layout None, bottom_clear_min None.

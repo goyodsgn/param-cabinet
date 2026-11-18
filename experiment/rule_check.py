@@ -1,7 +1,8 @@
 """General rule checker: measures the company rules directly on any cabinet's parts, without a reference
 model. Only the part names (door_, shelf_, pin_, leg_, divider_, ...) and the geometry are used, so it works
 for product types that have no answer key (tall cabinets, wall cabinets, drawers, ...).
-Drawer fronts (drawer_front_*) get the door gap check but no hinge or 600 cell check; other drawer_* parts
+Drawer fronts (drawer_front_*) and a corner cabinet's blind panel (blind_panel) get the door gap check
+but no hinge or 600 cell check; other drawer_* parts
 are the drawer boxes and do not count as carcass.
 
 usage: python experiment/rule_check.py MODEL.py      -> prints one JSON object
@@ -43,6 +44,8 @@ def kind(name):
     # Drawers: the front is checked like a door for gaps (no hinges, no 600 cell); the box is not carcass
     if name.startswith("drawer"):
         return "front" if "front" in name else "drawer"
+    if name.startswith("blind"):
+        return "front"  # corner cabinet blind panel: a fixed front, gaps like a door, no hinges
     for k in ("door", "shelf", "pin", "leg", "divider"):
         if name.startswith(k):
             return k
@@ -331,7 +334,8 @@ def check_parts(parts):
     absolute = ("door_cell", "door_gap", "hinge_count", "shelf_pins", "leg_spacing")
     return {"pass": all(res.values()), "absolute_pass": all(res.get(r, True) for r in absolute),
             "rules": res, "messages": {k: v[:5] for k, v in msgs.items()},
-            "counts": {"doors": len(doors) - len(fronts), "drawers": len(fronts), "shelves": sum(k == "shelf" for _, _, k, _ in P),
+            "counts": {"doors": len(doors) - len(fronts), "drawers": sum(n.startswith("drawer_front") for n in fronts),
+                       "blind": sum(n.startswith("blind") for n in fronts), "shelves": sum(k == "shelf" for _, _, k, _ in P),
                        "pins": len(pins), "legs": len(legs)}}
 
 

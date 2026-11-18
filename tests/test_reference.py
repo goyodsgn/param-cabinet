@@ -149,7 +149,7 @@ def test_bottom_space_for_albums(H, B, k):
         assert lay.shelf_z[0] - p.inner_bottom >= B - 1e-6
 
 
-@pytest.mark.parametrize("top_mode", ["inset", "onset", "none"])
+@pytest.mark.parametrize("top_mode", ["rail", "inset", "onset", "none"])
 @pytest.mark.parametrize("back_mode", ["onset", "inset"])
 def test_geometry_top_modes(top_mode, back_mode):
     pytest.importorskip("cadquery")
@@ -159,7 +159,8 @@ def test_geometry_top_modes(top_mode, back_mode):
                bottom_clear_min=350)
     parts = build(p)
     names = [n for n, _ in parts]
-    assert ("top" in names) == (top_mode != "none")
+    assert ("top" in names) == (top_mode in ("inset", "onset"))
+    assert ("top_rail" in names) == (top_mode == "rail")
     assert sum(n.startswith("divider_") for n in names) == 1
     assert check_solids(parts) == []
     assert bbox_size(parts) == pytest.approx((1500, 600, 850), abs=1e-3)

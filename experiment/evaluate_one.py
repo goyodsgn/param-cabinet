@@ -17,12 +17,12 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from cabinet_reference import Params, compute_layout, pin_ys, validate  # noqa: E402
+from cabinet_reference import Params, back_inset_h, compute_layout, pin_ys, validate  # noqa: E402
 
 # Keys a customer may change, and absolute rules that must keep the company value
 OVERRIDABLE = ["W", "H", "D", "leg_h", "back_mode", "top_mode", "t", "back_t", "divider_t", "door_t",
                "shelf_t", "n_doors", "n_shelves", "shelf_min_gap", "door_layout", "bottom_clear_min",
-               "single_door_hinge"]
+               "single_door_hinge", "rail_d"]
 STR_KEYS = ("back_mode", "top_mode", "single_door_hinge")
 INT_KEYS = ("n_doors", "n_shelves")
 ABSOLUTE = {"door_gap": 2.0, "door_max_w": 600.0, "pin_max_spacing": 500.0, "leg_max_spacing": 600.0}
@@ -127,8 +127,8 @@ def evaluate(path, overrides=None, mod=None, reference=None):
     except Exception:  # noqa: BLE001
         checks["solids"] = False
 
-    # Carcass parts present (no top panel when top_mode is "none")
-    need = ["side_left", "side_right", "bottom", "back"] + ([] if p.top_mode == "none" else ["top"])
+    # Carcass parts present (no top panel with "rail" or "none"; the rail is a part of its own)
+    need = ["side_left", "side_right", "bottom", "back"] + {"none": [], "rail": ["top_rail"]}.get(p.top_mode, ["top"])
     checks["carcass_parts"] = all(n in names for n in need)
 
     # Top panel: inset between the sides, onset over the sides, or none at all
@@ -137,7 +137,13 @@ def evaluate(path, overrides=None, mod=None, reference=None):
 
     try:
         top, sl, back = bb_of("top"), bb_of("side_left"), bb_of("back")
-        if p.top_mode == "none":
+        rail = bb_of("top_rail")
+        if p.top_mode == "rail":
+            top_ok = (top is None and rail is not None and sl is not None and abs(rail.xmin - p.t) < TOL
+                      and abs(rail.xlen - (p.W - 2 * p.t)) < TOL and abs(rail.zmax - p.H) < TOL
+                      and abs(rail.zlen - p.t) < TOL and abs(rail.ymin) < TOL and abs(rail.ylen - p.rail_d) < TOL
+                      and abs(sl.zmax - p.H) < TOL)
+        elif p.top_mode == "none":
             top_ok = top is None and sl is not None and abs(sl.zmax - p.H) < TOL
         elif top is None or sl is None:
             top_ok = False
@@ -155,7 +161,7 @@ def evaluate(path, overrides=None, mod=None, reference=None):
             checks["back_panel"] = abs(back.xlen - p.W) < TOL and abs(back.zlen - p.Hc) < TOL
         else:
             checks["back_panel"] = (abs(back.xmin - p.t) < TOL and abs(back.xlen - (p.W - 2 * p.t)) < TOL
-                                    and abs(back.zlen - p.clear_h) < TOL)
+                                    and abs(back.zlen - back_inset_h(p)) < TOL)
         res["got"] = {"top": [round(v, 1) for v in (top.xmin, top.xmax, top.zmin, top.zmax)] if top else None,
                       "back": [round(v, 1) for v in (back.xmin, back.xmax, back.zmin, back.zmax)] if back else None}
     except Exception:  # noqa: BLE001

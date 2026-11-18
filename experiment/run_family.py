@@ -52,6 +52,14 @@ def grade(path, expect):
             max(b.zmax for b in bbs) - min(b.zmin for b in bbs)]
     out["bbox"] = [round(v, 1) for v in size]
     out["size"] = all(abs(a - b) <= 1.0 for a, b in zip(size, expect["bbox"]))
+    if "door_side" in expect:
+        doors = [s.BoundingBox() for n, s in parts if n.startswith("door")]
+        mid = (min(b.xmin for b in bbs) + max(b.xmax for b in bbs)) / 2
+        side = "right" if doors and sum((b.xmin + b.xmax) / 2 for b in doors) / len(doors) > mid else "left"
+        out["counts"]["door_side"] = side
+        if side != expect["door_side"]:
+            out["request"] = False
+            out["failed"]["request"] = [f"door on the {side} (asked {expect['door_side']})"]
     for key in ("doors", "drawers"):
         if key in expect and out["counts"].get(key) != expect[key]:
             out["request"] = False

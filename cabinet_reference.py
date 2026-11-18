@@ -23,8 +23,10 @@ Rule priority
 Joinery
 - Doors are onset (overlay) on the whole carcass front.
 - Bottom panel sits between the side panels.
-- Top panel: top_mode "inset" (default, between the sides), "onset" (covers the top of the sides, W wide)
-  or "none" (no top panel at all, e.g. a sink cabinet; the worktop goes on later).
+- Top: base cabinets get no top panel; the worktop is fitted later on site (cooktop / sink positions).
+  top_mode "rail" (default): a front top rail, t thick and rail_d = 100 deep, lies flat between the sides
+  at the carcass top, flush with the front. "none": nothing on top (sink). "inset" / "onset" (a top panel
+  between / over the sides) are kept for general storage cabinets and for the earlier experiments.
 - Back panel is onset (covers the rear of sides, top and bottom) or inset (fits between them).
 
 Door arrangement
@@ -57,7 +59,9 @@ class Params:
     t: float = 18.0                   # side / top / bottom panel thickness
     back_t: float = 10.0              # back panel thickness
     back_mode: str = "onset"          # "onset" or "inset"
-    top_mode: str = "inset"           # "inset" (between sides), "onset" (covers sides) or "none" (sink)
+    top_mode: str = "rail"            # "rail" (front top rail, no top panel), "none" (sink),
+                                      # "inset" / "onset" (top panel between / over the sides)
+    rail_d: float = 100.0             # depth of the front top rail
     divider_t: float = 18.0           # inner vertical wall thickness
 
     # Doors
@@ -289,6 +293,12 @@ def leg_axis(p: Params, length: float):
     return [lo + i * step for i in range(n)]
 
 
+def back_inset_h(p: "Params") -> float:
+    """Height of an inset back panel: up to the top panel, or to the carcass top when nothing covers the
+    back at the top (rail at the front only, or no top at all)."""
+    return p.z0 + p.Hc - p.inner_bottom if p.top_mode in ("rail", "none") else p.clear_h
+
+
 def compute_layout(p: Params) -> Layout:
     g = p.door_gap
     groups = door_groups(p)
@@ -333,8 +343,8 @@ def validate(p: Params, lay: Layout | None = None) -> list:
         return ["dimension <= 0"]
     if p.back_mode not in ("onset", "inset"):
         errs.append(f"back_mode must be onset or inset, got {p.back_mode}")
-    if p.top_mode not in ("onset", "inset", "none"):
-        errs.append(f"top_mode must be onset, inset or none, got {p.top_mode}")
+    if p.top_mode not in ("rail", "onset", "inset", "none"):
+        errs.append(f"top_mode must be rail, onset, inset or none, got {p.top_mode}")
     if p.single_door_hinge not in (None, "left", "right"):
         errs.append(f"single_door_hinge must be left, right or None, got {p.single_door_hinge}")
     if p.door_layout is not None and (not p.door_layout or any(int(g) not in (1, 2) for g in p.door_layout)):
@@ -456,10 +466,12 @@ def build(p: Params, lay: Layout | None = None):
         parts.append(("top", box(p.W - 2 * t, body_d, t, t, 0, z0 + Hc - t)))
     elif p.top_mode == "onset":
         parts.append(("top", box(p.W, body_d, t, 0, 0, z0 + Hc - t)))
+    elif p.top_mode == "rail":
+        parts.append(("top_rail", box(p.W - 2 * t, p.rail_d, t, t, 0, z0 + Hc - t)))
     if p.back_mode == "onset":
         parts.append(("back", box(p.W, p.back_t, Hc, 0, Dc - p.back_t, z0)))
     else:
-        parts.append(("back", box(p.W - 2 * t, p.back_t, p.clear_h, t, Dc - p.back_t, p.inner_bottom)))
+        parts.append(("back", box(p.W - 2 * t, p.back_t, back_inset_h(p), t, Dc - p.back_t, p.inner_bottom)))
 
     # Inner walls
     for i, (x0, x1) in enumerate(lay.dividers):
@@ -530,6 +542,7 @@ def export(parts, stem: str, p: Params | None = None, lay: Layout | None = None)
                  f"top {p.top_mode}  ·  bays {lay.groups}")
         side_h = p.Hc - p.t if p.top_mode == "onset" else p.Hc
         top = {"inset": [(p.t, p.z0 + p.Hc - p.t, p.W - 2 * p.t, p.t)],
+               "rail": [(p.t, p.z0 + p.Hc - p.t, p.W - 2 * p.t, p.t)],
                "onset": [(0, p.z0 + p.Hc - p.t, p.W, p.t)], "none": []}[p.top_mode]
         inside = ([(0, p.z0, p.t, side_h), (p.W - p.t, p.z0, p.t, side_h),
                    (p.t, p.z0, p.W - 2 * p.t, p.t)] + top
@@ -549,12 +562,14 @@ def side_view(p: Params, lay: Layout) -> dict:
     body_d = p.Dc - p.back_t if p.back_mode == "onset" else p.Dc
     side_h = p.Hc - p.t if p.top_mode == "onset" else p.Hc
     panels = [(0, p.z0, body_d, side_h)]                                       # left side panel
-    if p.top_mode == "onset":
+    if p.top_mode in ("onset", "inset"):
         panels.append((0, p.z0 + p.Hc - p.t, body_d, p.t))
+    if p.top_mode == "rail":
+        panels.append((0, p.z0 + p.Hc - p.t, p.rail_d, p.t))
     if p.back_mode == "onset":
         panels.append((p.Dc - p.back_t, p.z0, p.back_t, p.Hc))
     else:
-        panels.append((p.Dc - p.back_t, p.inner_bottom, p.back_t, p.clear_h))
+        panels.append((p.Dc - p.back_t, p.inner_bottom, p.back_t, back_inset_h(p)))
     shelves = [(0, z, p.inner_back, p.shelf_t) for z in lay.shelf_z]
     door = (-(p.door_gap + p.door_t), lay.doors[0].z, p.door_t, lay.door_h)
     pins = [(y, z) for (xf, d, y, z) in lay.pins(p) if abs(xf - p.t) < 1e-6]
@@ -607,6 +622,6 @@ if __name__ == "__main__":
     if any(abs(a - b) > 1e-3 for a, b in zip(size, (p.W, p.D, p.H))):
         gerrs.append(f"bounding box {size} != (W, D, H)")
     print("geometry:", "OK" if not gerrs else gerrs)
-    extra = (f"_top-{p.top_mode}" if p.top_mode != "inset" else "") + \
+    extra = (f"_top-{p.top_mode}" if p.top_mode != "rail" else "") + \
         (f"_bays-{'-'.join(map(str, lay.groups))}" if p.door_layout else "")
     export(parts, f"{out}/cabinet_{int(p.W)}x{int(p.H)}x{int(p.D)}_{p.back_mode}{extra}", p, lay)
