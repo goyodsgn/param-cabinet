@@ -438,10 +438,8 @@ async function updateFamily(redrawControls = true) {
   buildFamily(item);
   frame(item.box[3] - item.box[0], item.box[5] - item.box[2]);
   if (redrawControls) famControls(f);
-  const esc = (x) => String(x).replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[ch]);
   document.getElementById("info").innerHTML = T.famInfo(item.counts) + " · " + T.check(item.pass, item.failed) +
     `<span class="note"><br>${T.famNote}</span>` +
-    (f.notes.length ? `<details><summary>${T.notes}</summary><ul>${f.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul></details>` : "") +
     (version.updated ? "<br>" + T.updated(version.updated, version.rev) + " · " : "<br>") + T.credit;
 }
 
