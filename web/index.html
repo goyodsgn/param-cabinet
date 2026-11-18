@@ -93,7 +93,7 @@ const T = EN ? {
   frontState: { show: "Shown", hide: "Hidden" },
   names: { f1_tall: "Tall cabinet", f2_wall: "Wall cabinet", f3_open: "Open shelf", f4_drawer: "Drawers", f5_corner: "Corner cabinet" },
   famInfo: (c) => `<b>${c.doors ?? 0}</b> doors · <b>${c.drawers ?? 0}</b> drawers · <b>${c.shelves ?? 0}</b> shelves · <b>${c.legs ?? 0}</b> legs`,
-  famNote: "Built by the AI agent from the base cabinet rules only, with no rules for this product. Checked by the rule checker.",
+  famNote: "Built by the AI agent from the design rulebook written for base cabinets (few or no rules for this product). Checked by the rule checker.",
   customer: "Customer", notes: "What the agent decided (in Korean)",
 } : {
   width: "폭", height: "높이", top: "상판", layout: "문 배치", door: "문",
@@ -108,7 +108,7 @@ const T = EN ? {
   frontState: { show: "보임", hide: "숨김" },
   names: {},
   famInfo: (c) => `문 <b>${c.doors ?? 0}</b>짝 · 서랍 <b>${c.drawers ?? 0}</b>개 · 선반 <b>${c.shelves ?? 0}</b>개 · 다릿발 <b>${c.legs ?? 0}</b>개`,
-  famNote: "이 제품의 규칙 없이 하부장 설계 규칙만 주고 AI 에이전트가 만든 모델입니다. 규칙 검사기로 확인했습니다.",
+  famNote: "하부장용으로 쓴 설계 규칙서만 보고 AI 에이전트가 만든 모델입니다(이 제품 규칙은 없거나 적음). 규칙 검사기로 확인했습니다.",
   customer: "고객", notes: "에이전트가 스스로 정한 것",
 };
 

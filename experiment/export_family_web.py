@@ -21,7 +21,7 @@ OUT = os.path.join(ROOT, "web", "family")
 
 
 def material(name):
-    if name.startswith("door") or name.startswith("drawer_front"):
+    if name.startswith("door") or name.startswith("drawer_front") or name.startswith("blind"):
         return "front"
     if name.startswith("leg"):
         return "leg"

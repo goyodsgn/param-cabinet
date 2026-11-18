@@ -51,8 +51,10 @@ door door_t = 22, shelf shelf_t = 30.
 
 Carcass joinery
 - The bottom panel sits between the sides, at z = leg_h .. leg_h + t.
-- Base cabinets (하부장) get NO top panel: the worktop is fitted later on site, where the cooktop and the
-  sink go. There is no part named `top`.
+- Base cabinets get NO top panel: the worktop is fitted later on site, where the cooktop and the sink go.
+  There is no part named `top`. Base cabinets are the kitchen units under the worktop: 하부장, 주방 하부장,
+  주방 서랍(장), 싱크대, 코너장 and the like. Free-standing furniture such as a plain 서랍장 (chest of drawers),
+  a bookcase or a tall storage cabinet is not a base cabinet and does get a top panel.
 - top_mode "rail" (default): a front top rail `top_rail`, t thick and rail_d = 100 deep, lies flat between
   the sides at the carcass top, flush with the carcass front: x = t .. W - t, y = 0 .. rail_d,
   z = H - t .. H. The sides run the full carcass height.
@@ -71,7 +73,10 @@ Corner base cabinet (코너장)
 - A corner cabinet is a straight box like any base cabinet, not an L shape. In an L-shaped kitchen a
   normal base cabinet butts against its front at a right angle, which makes the L.
 - One side of its front gets the door; the other side, hidden behind the neighbouring cabinet, is closed
-  with a fixed white `blind_panel` (no hinges). There are two versions: door on the left, door on the right.
+  with a fixed `blind_panel` (no hinges) in the same material and colour as the doors. There are two
+  versions: door on the left, door on the right.
+- The door hinges on the edge next to the blind panel (door on the right -> hinges on its left edge),
+  so it swings open away from the neighbouring cabinet's side.
 - Like every base cabinet it has no top panel.
 
 Doors (onset: they cover the whole carcass front)

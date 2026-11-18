@@ -60,6 +60,20 @@ def grade(path, expect):
         if side != expect["door_side"]:
             out["request"] = False
             out["failed"]["request"] = [f"door on the {side} (asked {expect['door_side']})"]
+        # corner cabinet: the door hinges on the edge next to the blind panel
+        from rule_check import cups_of
+        for n, s in parts:
+            if not n.startswith("door"):
+                continue
+            b, cups = s.BoundingBox(), cups_of(s)
+            if not cups:
+                continue
+            hinge = "left" if sum(c[0] for c in cups) / len(cups) < (b.xmin + b.xmax) / 2 else "right"
+            want = "left" if side == "right" else "right"
+            out["counts"]["hinge_edge"] = hinge
+            if hinge != want:
+                out["request"] = False
+                out["failed"].setdefault("request", []).append(f"{n} hinges on its {hinge} edge, not next to the blind panel")
     for key in ("doors", "drawers"):
         if key in expect and out["counts"].get(key) != expect[key]:
             out["request"] = False
@@ -176,6 +190,21 @@ def main():
         open(os.path.join(gen, f["id"] + ".chat.md"), "w", encoding="utf-8").write("\n".join(log))
         shutil.rmtree(work, ignore_errors=True)
 
+    if keep and os.path.exists(os.path.join(ROOT, "results", "family.csv")):
+        # only some families were run again: keep the saved rows of the others
+        old = [r for r in csv.DictReader(open(os.path.join(ROOT, "results", "family.csv"), encoding="utf-8"))
+               if r["id"] not in keep]
+        for r in old:
+            for key in ("counts", "failed", "notes", "bbox"):
+                r[key] = json.loads(r[key]) if r.get(key) else ({} if key in ("counts", "failed") else [])
+            for key in ("runs", "rules", "size", "request", "pass"):
+                r[key] = r[key] == "True"
+            r["turn"] = int(r["turn"])
+            for key in ("steps", "seconds", "output"):
+                r[key] = int(float(r[key] or 0))
+            r["usd"] = float(r["usd"] or 0)
+        order = [f["id"] for f in json.load(open(os.path.join(ROOT, "experiment", "families.json"), encoding="utf-8"))]
+        rows = sorted(old + rows, key=lambda r: (order.index(r["id"]), r["turn"]))
     write_report(rows, args.model)
 
 
