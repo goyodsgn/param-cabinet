@@ -74,52 +74,6 @@ def cups_of(solid):
     return out
 
 
-def door_axes(b):
-    """(u, thin): u = the door's horizontal width axis, thin = its thickness axis."""
-    return ("x", "y") if b["y1"] - b["y0"] < b["x1"] - b["x0"] else ("y", "x")
-
-
-def check_doors_any_direction(doors, fronts, body, fail):
-    """Doors that do not all face the front (e.g. an L-shaped corner cabinet): measure real distances.
-    - every door is door_gap from the carcass,
-    - neighbours in the same plane are 2 * door_gap apart, doors at an angle at least door_gap apart,
-    - cell width, hinge count and hinge cup positions along the door's own width axis.
-    The coverage of the carcass outline is not checked here."""
-    for i, (n, s, b) in enumerate(doors):
-        u, thin = door_axes(b)
-        w, h = b[u + "1"] - b[u + "0"], b["z1"] - b["z0"]
-        if n not in fronts and w + 2 * GAP > CELL_MAX + TOL:
-            fail("door_cell", f"{n}: cell {w + 2 * GAP:.0f} > {CELL_MAX:.0f}")
-        d = min(s.distance(c) for c in body)
-        if abs(d - GAP) > TOL:
-            fail("door_gap", f"{n}: {d:.1f} from the carcass, not {GAP:.0f}")
-        for m, s2, c in doors[i + 1:]:
-            d2 = s.distance(s2)
-            if d2 > 50:
-                continue
-            u2, thin2 = door_axes(c)
-            same_plane = thin2 == thin and abs(c[thin + "0"] - b[thin + "0"]) <= TOL
-            if same_plane and abs(d2 - 2 * GAP) > TOL:
-                fail("door_gap", f"{n}+{m}: {d2:.1f} apart, not {2 * GAP:.0f}")
-            if not same_plane and d2 < GAP - TOL:
-                fail("door_gap", f"{n}+{m}: {d2:.1f} apart at the corner, under {GAP:.0f}")
-        if n in fronts:
-            continue
-        cups = cups_of(s)
-        need = hinge_rule(h)
-        if len(cups) != need:
-            fail("hinge_count", f"{n}: {len(cups)} hinges for door height {h:.0f}, rule {need}")
-        if cups:
-            k = 0 if u == "x" else 1
-            cu = sum(c[k] for c in cups) / len(cups)
-            want = b[u + "0"] + CUP_X if cu < (b[u + "0"] + b[u + "1"]) / 2 else b[u + "1"] - CUP_X
-            if any(abs(c[k] - want) > TOL for c in cups):
-                fail("hinge_place", f"{n}: cups not {CUP_X} from the hinge edge")
-            zs = sorted(c[2] for c in cups)
-            if len(zs) >= 2 and (abs(zs[0] - (b["z0"] + CUP_END)) > TOL or abs(zs[-1] - (b["z1"] - CUP_END)) > TOL):
-                fail("hinge_place", f"{n}: end cups not {CUP_END:.0f} from top/bottom")
-
-
 def shelf_edges(shelf, panels):
     """Vertical faces of a shelf that rest against a panel (within 3 mm), as
     (axis_across, coord, axis_along, lo, hi, panel_kind)."""
@@ -179,11 +133,11 @@ def check_parts(parts):
     sides = {}
     front_only = all(b["y1"] - b["y0"] < b["x1"] - b["x0"] and b["y1"] <= C["y0"] + TOL for _, _, b in doors)
     if not front_only:
-        check_doors_any_direction(doors, fronts, [s for n, s, k, b in P if k in ("panel", "divider", "shelf")],
-                                  fail)
-        doors_old = []
-    else:
-        doors_old = doors
+        # Every cabinet is a straight box with its doors on the front (corner cabinets included, user rule 11/18)
+        for n, s, b in doors:
+            if not (b["y1"] - b["y0"] < b["x1"] - b["x0"] and b["y1"] <= C["y0"] + TOL):
+                fail("door_gap", f"{n}: not on the front of the carcass")
+    doors_old = doors
     for n, s, b in doors_old:
         w, h = b["x1"] - b["x0"], b["z1"] - b["z0"]
         if n not in fronts and w + 2 * GAP > CELL_MAX + TOL:
@@ -276,18 +230,7 @@ def check_parts(parts):
             c = s.Center()
             r2 = s.Volume() / (math.pi * max(b["z1"] - b["z0"], 1e-9))
             legs.append({"cx": c.x, "cy": c.y, "d": 2 * math.sqrt(r2)})
-    if legs and not front_only:
-        # Not a plain box (e.g. L-shaped corner cabinet): legs follow the outline, not a grid.
-        # Check every straight line of legs: neighbours at most leg_max apart.
-        for axis, other in (("x", "y"), ("y", "x")):
-            lines = {}
-            for l in legs:
-                lines.setdefault(round(l["c" + other]), []).append(l["c" + axis])
-            for key, cs in lines.items():
-                cs = sorted(cs)
-                if any(q - p > LEG_MAX + TOL for p, q in zip(cs, cs[1:])):
-                    fail("leg_spacing", f"legs on the line {other}={key}: {max(q - p for p, q in zip(cs, cs[1:])):.0f} apart > {LEG_MAX:.0f}")
-    elif legs:
+    if legs:
         d = legs[0]["d"]
         for axis, lo, hi in (("x", C["x0"], C["x1"]), ("y", C["y0"], C["y1"])):
             cs = sorted({round(l["c" + axis], 1) for l in legs})
