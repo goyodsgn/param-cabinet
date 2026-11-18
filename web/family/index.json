@@ -1,122 +1,488 @@
 [
  {
-  "file": "f1_tall_t1.json",
   "family": "f1_tall",
   "name": "키큰장",
-  "turn": 1,
-  "size": [
-   600,
-   600,
-   2100
-  ],
-  "pass": true
+  "axes": {
+   "W": [
+    450,
+    600,
+    750,
+    900
+   ],
+   "H": [
+    1800,
+    2100,
+    2400
+   ]
+  },
+  "items": {
+   "W-450_H-1800": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-450_H-2100": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-450_H-2400": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-600_H-1800": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-600_H-2100": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-600_H-2400": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-750_H-1800": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-750_H-2100": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-750_H-2400": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-900_H-1800": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-900_H-2100": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-900_H-2400": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   }
+  },
+  "default": {
+   "W": 900,
+   "H": 2100
+  },
+  "notes": [
+   "키큰장(전신장): 하부장이 아니라 일반 수납장으로 보고 상판을 얹음 - top_mode 'inset' (옆판 사이에 상판 18mm), 하부장의 '상판 없음' 규칙은 제외",
+   "다릿발 유지: 바닥에 세우는 가구라서 하부장 규칙 그대로 leg_h 100, 지름 40, 모서리 30 간격, 중간 간격 600 이하",
+   "문 규칙 유지: 폭 900이면 문 2개(셀 450, 600 이하), 문 높이 1996mm라서 문마다 경첩 4개(1600 초과 규칙)",
+   "문은 위아래 통짜 높이: 위아래 분할 도어는 규칙에 없어 만들지 않음. 양문형으로 왼쪽 문은 왼쪽 힌지, 오른쪽 문은 오른쪽 힌지",
+   "칸막이 규칙 유지: 두 문 사이 x=450에 안쪽 칸막이 1개(18mm)를 세워 칸을 둘로 나눔",
+   "선반 규칙 유지: 내부 높이 1964mm, 최소 간격 320 기준으로 칸마다 4장(총 8장), 선반 두께 30, 핀 규칙 그대로",
+   "다릿발은 폭 방향 간격이 600을 넘지 않도록 가운데 다리가 추가되어 6개",
+   "뒷판 onset 기본값 유지(뒷판이 옆/위/아래 뒤쪽을 덮음), 옆판은 바닥~상판 끝까지 전체 높이"
+  ]
  },
  {
-  "file": "f1_tall_t2.json",
-  "family": "f1_tall",
-  "name": "키큰장",
-  "turn": 2,
-  "size": [
-   900,
-   600,
-   2100
-  ],
-  "pass": true
- },
- {
-  "file": "f2_wall_t1.json",
   "family": "f2_wall",
   "name": "상부장",
-  "turn": 1,
-  "size": [
-   1200,
-   350,
-   700
-  ],
-  "pass": true
+  "axes": {
+   "W": [
+    600,
+    800,
+    1000,
+    1200
+   ],
+   "H": [
+    600,
+    750,
+    900
+   ]
+  },
+  "items": {
+   "W-600_H-600": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-600_H-750": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-600_H-900": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-800_H-600": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-800_H-750": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-800_H-900": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1000_H-600": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1000_H-750": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1000_H-900": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1200_H-600": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1200_H-750": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1200_H-900": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   }
+  },
+  "default": {
+   "W": 1200,
+   "H": 900
+  },
+  "notes": [
+   "다릿발 없음: 벽에 거는 상부장이라 다릿발 규칙 제외, leg_h=0 (캐비닛이 z=0~H, 바닥 기준은 설치 높이에서 따로 정함)",
+   "상판 있음: 하부장 규칙(상판 없음)은 제외하고, 일반 수납장처럼 top_mode=inset으로 옆판 사이에 상판을 넣음 (싱크 위 상부장이라 위가 막혀야 함)",
+   "뒷판 onset, 문 onset, 판재 두께(t 18, 뒷판 10, 문 22)는 기본 규칙 그대로 적용",
+   "문 개수: 폭 1200 / 최대 600 = 2개(양문), 문 간격 2mm, 경첩 컵 문당 2개(문 높이 896 <= 900) 규칙 그대로 적용",
+   "가운데 칸막이 1개: 양문 사이 이음부 뒤에 기본 규칙대로 세움 (폭 1200 상부장의 처짐을 막는 역할도 함)",
+   "선반 자동 칸마다 1개: 내경 높이 864에서 기본 규칙(최소 320)대로 k=floor((864-320)/350)=1, 선반 위아래 칸 각 417. 양문 2칸이라 선반 총 2개, 선반핀은 칸 규칙대로 선반당 4개",
+   "벽 걸이용 보강대(hanging_rail) 추가: 뒷판 10mm만으로는 무게를 못 받으므로 상판 아래 뒤쪽에 폭 100(rail_d), 두께 t의 보강대를 칸막이 사이마다 넣음 (고정 나사 위치)",
+   "하부장의 상판 레일 대신 상판은 전체 깊이 판으로 처리하고 레일 규칙은 제외"
+  ]
  },
  {
-  "file": "f2_wall_t2.json",
-  "family": "f2_wall",
-  "name": "상부장",
-  "turn": 2,
-  "size": [
-   1200,
-   350,
-   900
-  ],
-  "pass": true
- },
- {
-  "file": "f3_open_t1.json",
   "family": "f3_open",
   "name": "오픈 선반",
-  "turn": 1,
-  "size": [
-   800,
-   300,
-   1800
-  ],
-  "pass": true
+  "axes": {
+   "W": [
+    600,
+    800,
+    1000,
+    1200,
+    1400
+   ],
+   "H": [
+    1200,
+    1500,
+    1800
+   ]
+  },
+  "items": {
+   "W-600_H-1200": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-600_H-1500": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-600_H-1800": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-800_H-1200": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-800_H-1500": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-800_H-1800": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1000_H-1200": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1000_H-1500": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1000_H-1800": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1200_H-1200": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1200_H-1500": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1200_H-1800": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1400_H-1200": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1400_H-1500": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1400_H-1800": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   }
+  },
+  "default": {
+   "W": 1400,
+   "H": 1800
+  },
+  "notes": [
+   "문 없음: 오픈 책장이라 문, 경첩은 만들지 않음. 문 규칙은 적용 제외",
+   "깊이: 문이 없어서 문 두께와 문 간격을 빼지 않고 D=300 전체를 본체 깊이로 사용",
+   "상판 있음: 하부장 규칙(상판 없음)은 제외. 책장은 일반 수납장이라 onset 상판(W 폭, 옆판 위를 덮음)을 사용",
+   "세로 칸막이 추가: 폭 1400이면 선반 한 장이 1364로 길어 책 무게에 처지므로 칸 폭 최대 800(bay_max_w)으로 나눠 가운데에 칸막이 1개를 세움",
+   "칸막이 위치: 문 칸막이 규칙을 carry-over, 전체 폭을 칸 수로 균등 분할한 경계(x = W/2)에 중심을 둠. 두께 18",
+   "선반은 칸마다 한 세트: 칸 폭 - 2(좌우 1 여유), 칸마다 같은 개수와 같은 높이로 균등 배치",
+   "선반핀: 칸마다 선반 좌우 판(옆판 또는 칸막이)에 규칙대로 설치. 칸막이는 양쪽 면에 8 깊이 구멍(18 두께라 서로 관통하지 않음)",
+   "다릿발 유지, 높이 60: 키 큰 가구는 바닥 청소와 수평 조절을 위해 다릿발 규칙(지름 40, 모서리 30 간격, 간격 600 이하)을 그대로 적용하되 높이만 100에서 60으로 낮춤. 폭이 넓어져 폭 방향 4개",
+   "선반 개수 자동: 내경 높이 기준 선반 사이 간격 320 이상(책 높이 고려) 규칙을 그대로 적용해 균등 배치",
+   "선반 두께 30 유지: 책 무게에 처짐을 줄이기 위해 기본 선반 두께를 그대로 사용",
+   "뒤판 onset 10 유지: 뒤판이 옆판, 상판, 하판 뒤를 덮어 흔들림을 잡아줌"
+  ]
  },
  {
-  "file": "f3_open_t2.json",
-  "family": "f3_open",
-  "name": "오픈 선반",
-  "turn": 2,
-  "size": [
-   1400,
-   300,
-   1800
-  ],
-  "pass": true
- },
- {
-  "file": "f4_drawer_t1.json",
   "family": "f4_drawer",
   "name": "서랍장",
-  "turn": 1,
-  "size": [
-   600,
-   580,
-   850
-  ],
-  "pass": true
+  "axes": {
+   "W": [
+    450,
+    600,
+    750,
+    900
+   ],
+   "H": [
+    700,
+    850
+   ],
+   "n_drawers": [
+    3,
+    4
+   ]
+  },
+  "items": {
+   "W-450_H-700_n_drawers-3": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-450_H-700_n_drawers-4": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-450_H-850_n_drawers-3": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-450_H-850_n_drawers-4": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-600_H-700_n_drawers-3": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-600_H-700_n_drawers-4": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-600_H-850_n_drawers-3": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-600_H-850_n_drawers-4": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-750_H-700_n_drawers-3": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-750_H-700_n_drawers-4": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-750_H-850_n_drawers-3": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-750_H-850_n_drawers-4": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-900_H-700_n_drawers-3": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-900_H-700_n_drawers-4": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-900_H-850_n_drawers-3": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-900_H-850_n_drawers-4": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   }
+  },
+  "default": {
+   "W": 900,
+   "H": 850,
+   "n_drawers": 3
+  },
+  "notes": [
+   "서랍장: 문 대신 서랍 3단. 문/힌지/칸막이/선반/선반핀은 없음 (n_doors=0, n_shelves=0)",
+   "서랍 앞판: 문 규칙 이월. 한 칸 = 높이/3, 사방 door_gap 2 여유, 두께 22, 폭 896",
+   "서랍 앞판 폭 896은 문 폭 600 제한 비적용: 힌지로 열리는 문이 아니라 레일로 당기는 서랍이라 한 장으로 유지",
+   "상판 있음(top_mode onset): 하부장 규칙(상판 없음)은 일반 수납장에는 적용하지 않고 상판을 W 폭으로 덮음. 측판은 H-t까지",
+   "다릿발 유지: 하부장 규칙 그대로 지름 40, 높이 100, 모서리 30 간격, 간격 600 이하 (4개)",
+   "서랍 상자: 레일 한쪽 12.5 여유, 옆판 16, 바닥 8, 깊이 500(내경 깊이에 맞춰 제한), 앞/뒤판은 옆판 사이",
+   "서랍 상자 높이는 안쪽 높이를 4등분한 칸에서 위아래 10씩 띄움. 손잡이는 고객 요청 없어 생략",
+   "뒤판 onset(기본값) 유지: 뒤판 10mm가 측판/상판/하판 뒤를 덮음"
+  ]
  },
  {
-  "file": "f4_drawer_t2.json",
-  "family": "f4_drawer",
-  "name": "서랍장",
-  "turn": 2,
-  "size": [
-   900,
-   580,
-   850
-  ],
-  "pass": true
- },
- {
-  "file": "f5_corner_t1.json",
   "family": "f5_corner",
   "name": "코너장",
-  "turn": 1,
-  "size": [
-   1000,
-   580,
-   850
-  ],
-  "pass": true
- },
- {
-  "file": "f5_corner_t2.json",
-  "family": "f5_corner",
-  "name": "코너장",
-  "turn": 2,
-  "size": [
-   1000,
-   580,
-   850
-  ],
-  "pass": true
+  "axes": {
+   "W": [
+    900,
+    1000,
+    1100,
+    1200
+   ],
+   "door_side": [
+    "left",
+    "right"
+   ]
+  },
+  "items": {
+   "W-900_door_side-left": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-900_door_side-right": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1000_door_side-left": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1000_door_side-right": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1100_door_side-left": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1100_door_side-right": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1200_door_side-left": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   },
+   "W-1200_door_side-right": {
+    "ok": true,
+    "pass": true,
+    "failed": []
+   }
+  },
+  "default": {
+   "W": 1000,
+   "door_side": "left"
+  },
+  "notes": [
+   "코너장: 직사각 박스 하부장으로 만들고 ㄱ자는 옆 캐비닛이 앞면에 직각으로 붙어서 만듦",
+   "문은 왼쪽 칸 하나(door_1), 오른쪽 칸은 같은 재질의 고정 막이판(blind_panel, 힌지 없음)",
+   "문 힌지는 막이판과 가까운 오른쪽 모서리: 문이 왼쪽이면 오른쪽 힌지 규칙 적용 (single_door_hinge = right)",
+   "칸 폭 W/n = 1000/2 = 500 (600 이하): 문 칸 폭 규칙을 막이판 칸에도 그대로 적용",
+   "칸막이(divider) 없음: 막이판 뒤 공간은 문을 열고 안쪽으로 손이 닿아야 하므로 벽으로 막지 않음",
+   "선반은 막힌 칸 없이 한 칸(전체 내경 폭)으로 보고 1세트만 배치, 핀 규칙은 그대로 적용",
+   "상판 없음: 하부장 규칙 그대로 앞 상부 레일(top_rail)만 둠, 다릿발 규칙 그대로 적용"
+  ]
  }
 ]
