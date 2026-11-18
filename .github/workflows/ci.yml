@@ -22,14 +22,15 @@ jobs:
         run: pytest -v
       - name: Evaluator smoke test (reference must pass every check)
         run: |
-          python experiment/evaluate_one.py examples/reference_generated.py | tee eval.json
+          # examples/reference_generated.py is an earlier AI output with an inset top panel (before the rail rule)
+        python experiment/evaluate_one.py examples/reference_generated.py | tee eval.json
           python -c "import json,sys; r=json.load(open('eval.json')); print(r.get('checks')); sys.exit(0 if r.get('pass') else 1)"
           python experiment/evaluate_one.py examples/reference_generated.py '{"W": 2400, "H": 1700, "D": 900, "leg_h": 120, "back_mode": "inset", "n_doors": 6, "n_shelves": 1}' | tee eval2.json
           python -c "import json,sys; r=json.load(open('eval2.json')); print(r.get('checks')); sys.exit(0 if r.get('pass') else 1)"
           for ov in '{"W": 1500, "D": 600, "door_layout": [1, 2], "top_mode": "onset"}' \
                     '{"W": 900, "D": 600, "top_mode": "none", "back_mode": "inset", "n_shelves": 0}' \
-                    '{"W": 1200, "H": 1500, "D": 450, "bottom_clear_min": 330, "n_shelves": 3}' \
-                    '{"W": 2400, "H": 900, "D": 600, "door_layout": [2, 2], "bottom_clear_min": 400}'; do
+                    '{"W": 1200, "H": 1500, "D": 450, "bottom_clear_min": 330, "n_shelves": 3, "top_mode": "inset"}' \
+                    '{"W": 2400, "H": 900, "D": 600, "door_layout": [2, 2], "bottom_clear_min": 400, "top_mode": "inset"}'; do
             python experiment/evaluate_one.py examples/reference_generated.py "$ov" "$ov" | tee eval3.json
             python -c "import json,sys; r=json.load(open('eval3.json')); print(r.get('checks')); sys.exit(0 if r.get('pass') else 1)"
           done
