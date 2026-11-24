@@ -53,6 +53,17 @@ def grade(path, expect):
             max(b.zmax for b in bbs) - min(b.zmin for b in bbs)]
     out["bbox"] = [round(v, 1) for v in size]
     out["size"] = all(abs(a - b) <= 1.0 for a, b in zip(size, expect["bbox"]))
+    names = [n for n, _ in parts]
+    if "top" in expect:  # product rule: base cabinets have no top panel, other furniture has one (user 11/18)
+        has_top = any(n == "top" or (n.startswith("top") and not n.startswith("top_rail")) for n in names)
+        out["counts"]["top"] = has_top
+        if has_top != expect["top"]:
+            out["request"] = False
+            out["failed"]["top"] = [f"top panel {'present' if has_top else 'missing'} (rule: {'top' if expect['top'] else 'no top'})"]
+    if expect.get("blind_panel"):  # corner cabinet: blind panel next to the door (user 11/18)
+        if not any(n.startswith("blind") for n in names):
+            out["request"] = False
+            out["failed"]["blind_panel"] = ["no blind_panel"]
     if "door_side" in expect:
         doors = [s.BoundingBox() for n, s in parts if n.startswith("door")]
         mid = (min(b.xmin for b in bbs) + max(b.xmax for b in bbs)) / 2

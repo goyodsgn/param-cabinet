@@ -34,6 +34,7 @@ GOOD = [
     ("900 싱크대(상판 없음), 뒷판 인셋", dict(W=900, D=600, top_mode="none", back_mode="inset")),
     ("1200x1500x450 아래칸 330 이상, 선반 3", dict(W=1200, H=1500, D=450, bottom_clear_min=330, n_shelves=3)),
     ("2100 한쪽문+양문+양문", dict(W=2100, D=600, door_layout=[1, 2, 2])),
+    ("600 서랍 1단 (앞판 + 서랍 상자)", None),
 ]
 
 
@@ -52,11 +53,31 @@ def broken_cases():
         ("양문 사이에 칸막이를 빼버림 (경첩 R R)", dict(W=1800), "drop_divider_2", ["pair_sides"]),
         ("선반을 같은 자리에 하나 더", {}, "dup_shelf", ["overlap"]),
         ("선반 하나가 공중에 떠 있음", {}, "float_shelf", ["connected"]),
+        ("서랍 앞판만 있고 서랍 상자 없음", {}, "drawer_no_box", ["drawer_box"]),
     ]
     return out
 
 
+def drawer_cabinet(with_box=True):
+    """A one-drawer cabinet built from the reference (W 600, no shelves): the door becomes a drawer
+    front of the same size without hinge cups, and a drawer box sits on the bottom panel behind it."""
+    p = Params(W=600, n_shelves=0)
+    parts = [(n, s) for n, s in build(p) if not n.startswith("door")]
+    door = [s for n, s in build(p) if n.startswith("door")][0].BoundingBox()
+    front = cq.Solid.makeBox(door.xlen, door.ylen, door.zlen, pnt=cq.Vector(door.xmin, door.ymin, door.zmin))
+    parts.append(("drawer_front_1", front))
+    if with_box:
+        z0 = p.leg_h + p.t
+        box = cq.Solid.makeBox(p.W - 2 * p.t - 25, 400, 300, pnt=cq.Vector(p.t + 12.5, 0, z0))
+        parts.append(("drawer_1_box", box))
+    return parts
+
+
 def mutate(parts, how):
+    if how == "drawer_ok":
+        return drawer_cabinet(True)
+    if how == "drawer_no_box":
+        return drawer_cabinet(False)
     if how == "drop_divider_2":
         return [(n, s) for n, s in parts if n != "divider_2"]
     if how == "dup_shelf":
@@ -90,7 +111,7 @@ def main():
     md += ["## 1. 규칙을 지킨 캐비닛 (전부 통과해야 함)", "", "| 캐비닛 | 결과 | 걸린 규칙 |", "|---|---|---|"]
     good_ok = 0
     for name, kw in GOOD:
-        res = check_parts(build(Params(**kw)))
+        res = check_parts(drawer_cabinet(True) if kw is None else build(Params(**kw)))
         good_ok += res["pass"]
         md.append(f"| {name} | {'통과' if res['pass'] else '실패'} | {', '.join(failed(res)) or '-'} |")
         print(name, res["pass"], res.get("messages"))

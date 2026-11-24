@@ -18,6 +18,7 @@ Rules checked (numbers are the company rules; nothing product specific):
   shelf_pins    ABSOLUTE  per shelf side: pins 50 from front and back, spacing <= 500, count = minimum
   leg_spacing   ABSOLUTE  neighbouring leg centers <= 600 apart along width and depth
   leg_place               corner legs 30 from the carcass edge, minimum leg count per line
+  drawer_box              a drawer box behind every drawer front (user rule)
   overlap                 no two parts share volume
   connected               every part touches the cabinet (within the door gap)
   solids                  every part is a valid solid with volume
@@ -188,6 +189,19 @@ def check_parts(parts):
             wall = any(w["x0"] - TOL <= joint <= w["x1"] + TOL and w["x1"] - w["x0"] < 60 for w in walls)
             if not wall and (sides.get(n), sides.get(m)) != ("left", "right"):
                 fail("pair_sides", f"{n}+{m}: no wall behind the joint, hinges {sides.get(n)}/{sides.get(m)}")
+
+    # Drawer box behind every drawer front (user 11/16: taking the front off leaves the box)
+    boxes = [b for n, s, k, b in P if k == "drawer"]
+    for n, s, k, b in P:
+        if not n.startswith("drawer_front"):
+            continue
+        ok("drawer_box")
+        w = b["x1"] - b["x0"]
+        behind = [c for c in boxes if c["y0"] >= b["y1"] - TOL
+                  and overlap_1d(b["x0"], b["x1"], c["x0"], c["x1"]) > 0.5 * w
+                  and overlap_1d(b["z0"], b["z1"], c["z0"], c["z1"]) > 0]
+        if not behind:
+            fail("drawer_box", f"{n}: no drawer box behind the front")
 
     # Shelf pins
     ok("shelf_pins")
