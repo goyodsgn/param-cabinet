@@ -54,7 +54,7 @@ def grade(path, expect):
     out["bbox"] = [round(v, 1) for v in size]
     out["size"] = all(abs(a - b) <= 1.0 for a, b in zip(size, expect["bbox"]))
     names = [n for n, _ in parts]
-    if "top" in expect:  # product rule: base cabinets have no top panel, other furniture has one (user 11/18)
+    if "top" in expect:  # product rule: base cabinets have no top panel (천판) since the worktop (상판) goes on later; 서랍장, 책장, 키큰장, 상부장 have one (user 11/18, 11/24)
         has_top = any(n == "top" or (n.startswith("top") and not n.startswith("top_rail")) for n in names)
         out["counts"]["top"] = has_top
         if has_top != expect["top"]:

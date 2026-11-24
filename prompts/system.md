@@ -56,10 +56,12 @@ door door_t = 22, shelf shelf_t = 30.
 
 Carcass joinery
 - [사용자] The bottom panel sits between the sides, at z = leg_h .. leg_h + t.
-- [사용자] Base cabinets get NO top panel: the worktop is fitted later on site, where the cooktop and the sink go.
+- [사용자] Terms: the top panel of a carcass is 천판; the kitchen worktop fitted on site is 상판. They are
+  different parts.
+- [사용자] Base cabinets get NO top panel (천판): the worktop (상판) is fitted later on site, where the cooktop and the sink go.
   There is no part named `top`. Base cabinets are the kitchen units under the worktop: 하부장, 주방 하부장,
-  주방 서랍(장), 싱크대, 코너장 and the like. Free-standing furniture such as a plain 서랍장 (chest of drawers),
-  a bookcase or a tall storage cabinet is not a base cabinet and does get a top panel.
+  주방 서랍(장), 싱크대, 코너장 and the like. A plain 서랍장 (chest of drawers), a bookcase (책장), a tall
+  cabinet (키큰장) and a wall cabinet (상부장) are not base cabinets and do get a top panel (천판).
 - [사용자] top_mode "rail" (default): a front top rail `top_rail`, t thick and rail_d = 100 deep, lies flat between
   the sides at the carcass top, flush with the carcass front: x = t .. W - t, y = 0 .. rail_d,
   z = H - t .. H. The sides run the full carcass height.

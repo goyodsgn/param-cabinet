@@ -30,7 +30,7 @@ EDGE_RULES = [
     "뒷판(10mm)은 엣지를 붙이지 않는다",
     "문은 네 모서리 모두 엣지",
 ]
-KOR = {"side_left": "측판(좌)", "side_right": "측판(우)", "top_rail": "앞 가로대", "top": "상판", "bottom": "하판", "back": "뒷판",
+KOR = {"side_left": "측판(좌)", "side_right": "측판(우)", "top_rail": "앞 가로대", "top": "천판", "bottom": "하판", "back": "뒷판",
        "divider": "칸막이", "shelf": "선반", "door": "문"}
 DIR_KOR = {("y", -1): "앞", ("y", 1): "뒤", ("z", 1): "위", ("z", -1): "아래", ("x", -1): "왼쪽", ("x", 1): "오른쪽"}
 
