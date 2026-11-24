@@ -1,2 +1,3 @@
 graded_date,experiment,criteria_version,code_commit,summary
 2026-11-18,rule_check,223ba9b443,52226f2,범용 규칙 검사기 검증
+2026-11-24,family,f37608c252,ec588c6,제품군 확장 테스트 (연구 질문 3)
