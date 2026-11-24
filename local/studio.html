@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>파라메트릭 가구 스튜디오 (로컬)</title>
+<style>
+  :root { --bg:#fbfaf7; --card:#ffffff; --ink:#1d1d1b; --line:#d9d6cf; --ok:#1f7a3f; --bad:#b3261e; --accent:#2f5d8a; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 14px/1.5 -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; color:var(--ink); background:var(--bg); }
+  .app { display:grid; grid-template-columns: 1fr 400px; height:100vh; }
+  #view { position:relative; }
+  #view canvas { display:block; }
+  .hud { position:absolute; left:16px; top:14px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .chip { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:4px 10px; }
+  .chip.ok { color:var(--ok); border-color:var(--ok); }
+  .chip.bad { color:var(--bad); border-color:var(--bad); }
+  button { font:inherit; border:1px solid var(--line); background:var(--card); border-radius:6px; padding:5px 12px; cursor:pointer; color:var(--ink); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:disabled { opacity:.5; cursor:default; }
+  aside { border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0; background:var(--card); }
+  .tabs { display:flex; border-bottom:1px solid var(--line); }
+  .tabs button { flex:1; border:0; border-radius:0; padding:10px; background:transparent; }
+  .tabs button.on { font-weight:600; border-bottom:2px solid var(--ink); }
+  .pane { flex:1; overflow:auto; padding:14px 16px; display:none; }
+  .pane.on { display:block; }
+  .msg { border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:8px; white-space:pre-wrap; }
+  .msg.user { background:#f3efe6; }
+  .msg .who { font-size:12px; font-weight:600; margin-bottom:2px; }
+  .compose { border-top:1px solid var(--line); padding:10px 12px; display:flex; gap:8px; }
+  .compose textarea { flex:1; font:inherit; border:1px solid var(--line); border-radius:6px; padding:6px 8px; resize:none; height:60px; }
+  .row { border:1px solid var(--line); border-radius:6px; padding:8px 10px; margin-bottom:8px; }
+  .row label { display:flex; justify-content:space-between; gap:8px; font-weight:500; }
+  .row input[type=range] { width:100%; }
+  .row input[type=number] { width:90px; font:inherit; border:1px solid var(--line); border-radius:4px; padding:1px 4px; text-align:right; }
+  .row .base { font-size:12px; }
+  .row.changed { border-color:var(--accent); }
+  h3 { font-size:14px; margin:14px 0 8px; }
+  ul { margin:0; padding-left:18px; }
+  .fail { color:var(--bad); }
+  .busy { position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(251,250,247,.6); font-size:16px; }
+  .busy.on { display:flex; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+               "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div class="app">
+  <div id="view">
+    <div class="hud">
+      <span class="chip" id="size">모델 없음</span>
+      <span class="chip" id="check">규칙 검사 -</span>
+      <button id="openBtn">문·서랍 열기</button>
+      <button id="fitBtn">화면 맞춤</button>
+    </div>
+    <div class="busy" id="busy">에이전트가 작업 중입니다…</div>
+  </div>
+  <aside>
+    <div class="tabs">
+      <button data-tab="chat" class="on">에이전트 대화</button>
+      <button data-tab="params">파라미터</button>
+      <button data-tab="info">검사·메모</button>
+    </div>
+    <div class="pane on" id="pane-chat"><div id="msgs"></div></div>
+    <div class="pane" id="pane-params">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button id="resetParams">에이전트 값으로 되돌리기</button>
+      </div>
+      <div id="params"></div>
+    </div>
+    <div class="pane" id="pane-info"><div id="info"></div></div>
+    <div class="compose">
+      <textarea id="text" placeholder="예: 폭 900, 높이 850, 깊이 580 하부장 만들어줘"></textarea>
+      <button class="primary" id="send">보내기</button>
+    </div>
+  </aside>
+</div>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const view = document.getElementById("view");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(devicePixelRatio);
+renderer.setClearColor(0xfbfaf7);
+view.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 10, 50000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0xcfc8bb, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(2000, 4000, 3000); scene.add(sun);
+
+const MAT = {
+  body: new THREE.MeshStandardMaterial({ color: 0xf1ece1, roughness: .85 }),
+  front: new THREE.MeshStandardMaterial({ color: 0xc9a27a, roughness: .7 }),
+  leg: new THREE.MeshStandardMaterial({ color: 0x55565a, roughness: .5 }),
+  pin: new THREE.MeshStandardMaterial({ color: 0xb3261e, roughness: .5 }),
+};
+const lineMat = new THREE.LineBasicMaterial({ color: 0x6b665c });
+let root = null, movers = [], opened = false, lastBox = null;
+
+function resize() {
+  const w = view.clientWidth, h = view.clientHeight;
+  renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize); resize();
+(function loop() { requestAnimationFrame(loop); controls.update(); animate(); renderer.render(scene, camera); })();
+
+// cabinet coords (x right, y depth, front at y<0, z up) -> three (x, z, -y)
+function geom(p) {
+  const g = new THREE.BufferGeometry();
+  const v = new Float32Array(p.v.length);
+  for (let i = 0; i < p.v.length; i += 3) { v[i] = p.v[i]; v[i + 1] = p.v[i + 2]; v[i + 2] = -p.v[i + 1]; }
+  g.setAttribute("position", new THREE.BufferAttribute(v, 3));
+  g.setIndex(p.i); g.computeVertexNormals();
+  return g;
+}
+
+function show(model) {
+  if (root) scene.remove(root);
+  root = new THREE.Group(); movers = [];
+  for (const p of model.parts) {
+    const g = geom(p);
+    const mesh = new THREE.Mesh(g, MAT[p.m] || MAT.body);
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(g, 30), lineMat);
+    const item = new THREE.Group(); item.add(mesh, edges);
+    if (p.o && p.o.t === "hinge") {
+      const pivot = new THREE.Group(); pivot.position.set(p.o.x, 0, -p.o.y);
+      item.position.set(-p.o.x, 0, p.o.y); pivot.add(item); root.add(pivot);
+      movers.push({ obj: pivot, kind: "hinge", target: p.o.side === "left" ? -95 : 95, cur: 0 });
+    } else if (p.o && p.o.t === "slide") {
+      root.add(item); movers.push({ obj: item, kind: "slide", target: p.o.d, cur: 0 });
+    } else root.add(item);
+  }
+  scene.add(root);
+  const b = model.box;
+  document.getElementById("size").textContent = `폭 ${Math.round(b[3] - b[0])} · 깊이 ${Math.round(b[4] - b[1])} · 높이 ${Math.round(b[5] - b[2])}`;
+  const c = document.getElementById("check");
+  c.textContent = model.check.pass ? "규칙 검사: 통과" : `규칙 검사: ${Object.keys(model.check.failed).join(", ")}`;
+  c.className = "chip " + (model.check.pass ? "ok" : "bad");
+  if (!lastBox) fit(b);
+  lastBox = b;
+}
+function fit(b) {
+  b = b || lastBox; if (!b) return;
+  const cx = (b[0] + b[3]) / 2, cy = (b[2] + b[5]) / 2, cz = -(b[1] + b[4]) / 2;
+  const r = Math.max(b[3] - b[0], b[5] - b[2], b[4] - b[1]);
+  controls.target.set(cx, cy, cz);
+  camera.position.set(cx + r * 0.9, cy + r * 0.55, cz + r * 1.9);
+}
+function animate() {
+  for (const m of movers) {
+    const goal = opened ? m.target : 0;
+    m.cur += (goal - m.cur) * 0.15;
+    if (m.kind === "hinge") m.obj.rotation.y = THREE.MathUtils.degToRad(m.cur);
+    else m.obj.position.z = m.cur;
+  }
+}
+document.getElementById("openBtn").onclick = e => { opened = !opened; e.target.textContent = opened ? "문·서랍 닫기" : "문·서랍 열기"; };
+document.getElementById("fitBtn").onclick = () => fit();
+
+// tabs
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === "pane-" + b.dataset.tab));
+});
+
+const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+let S = null;
+
+function render(st) {
+  S = st;
+  document.getElementById("msgs").innerHTML = st.history.map(h =>
+    `<div class="msg ${h.who}"><div class="who">${h.who === "user" ? "사용자" : "에이전트" + (h.seconds ? ` · ${h.seconds}초` : "")}</div>${esc(h.text)}</div>`).join("");
+  const pane = document.getElementById("pane-chat"); pane.scrollTop = pane.scrollHeight;
+  renderParams();
+  const m = st.model;
+  let info = `<h3>에이전트 메모</h3>` + (st.notes.length ? `<ul>${st.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : "없음");
+  if (m && m.check) {
+    info += `<h3>규칙 검사 (검사기: 규칙직접비교)</h3>` + (m.check.pass ? "모두 통과" :
+      `<ul>${Object.entries(m.check.failed).map(([k, v]) => `<li class="fail">${esc(k)}: ${esc(v.join(" / "))}</li>`).join("")}</ul>`);
+  }
+  info += `<h3>대화 기록 폴더</h3>${esc(st.dir)}`;
+  document.getElementById("info").innerHTML = info;
+  if (m && m.parts) show(m);
+  if (m && m.error) { const c = document.getElementById("check"); c.textContent = "모델 오류: " + m.error; c.className = "chip bad"; }
+}
+
+function range(k, v) {
+  if (["W", "H", "D"].includes(k)) return [300, 3000, 10];
+  if (Number.isInteger(v) && v < 20) return [0, Math.max(10, v * 3), 1];
+  const hi = Math.max(50, Math.ceil(v * 3 / 10) * 10);
+  return [0, hi, v % 1 ? 0.5 : 1];
+}
+function renderParams() {
+  const box = document.getElementById("params");
+  if (!S || !S.params || !Object.keys(S.params).length) { box.innerHTML = "아직 모델이 없습니다."; return; }
+  const rows = [];
+  for (const [k, v] of Object.entries(S.params)) {
+    const b = S.base[k];
+    const changed = JSON.stringify(v) !== JSON.stringify(b);
+    if (typeof v === "number") {
+      const [lo, hi, st] = range(k, b);
+      rows.push(`<div class="row ${changed ? "changed" : ""}"><label>${esc(k)} <input type="number" data-k="${esc(k)}" value="${v}" step="${st}"></label>
+        <input type="range" data-k="${esc(k)}" min="${lo}" max="${Math.max(hi, v)}" step="${st}" value="${v}">
+        <div class="base">에이전트 값 ${esc(b)}</div></div>`);
+    } else if (typeof v === "boolean") {
+      rows.push(`<div class="row ${changed ? "changed" : ""}"><label>${esc(k)} <input type="checkbox" data-k="${esc(k)}" ${v ? "checked" : ""}></label></div>`);
+    } else {
+      rows.push(`<div class="row"><label>${esc(k)} <span>${esc(JSON.stringify(v))}</span></label></div>`);
+    }
+  }
+  box.innerHTML = rows.join("");
+  box.querySelectorAll("input[type=range]").forEach(el => {
+    el.oninput = () => { box.querySelector(`input[type=number][data-k="${el.dataset.k}"]`).value = el.value; };
+    el.onchange = () => setParam(el.dataset.k, Number(el.value));
+  });
+  box.querySelectorAll("input[type=number]").forEach(el => el.onchange = () => setParam(el.dataset.k, Number(el.value)));
+  box.querySelectorAll("input[type=checkbox]").forEach(el => el.onchange = () => setParam(el.dataset.k, el.checked));
+}
+
+let pending = Promise.resolve();
+function setParam(k, v) {
+  const params = {};
+  for (const [kk, vv] of Object.entries(S.params)) if (JSON.stringify(vv) !== JSON.stringify(S.base[kk])) params[kk] = vv;
+  params[k] = v;
+  pending = pending.then(() => post("/api/params", { params }, false)).then(render);
+}
+async function post(url, body, busy) {
+  if (busy) document.getElementById("busy").classList.add("on");
+  try {
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    return await r.json();
+  } finally { document.getElementById("busy").classList.remove("on"); }
+}
+document.getElementById("resetParams").onclick = () => post("/api/params", { params: {} }, false).then(render);
+const send = document.getElementById("send"), text = document.getElementById("text");
+async function sendMsg() {
+  const t = text.value.trim(); if (!t) return;
+  send.disabled = true; text.value = "";
+  S.history.push({ who: "user", text: t }); render(Object.assign({}, S, { model: null }));
+  try { render(await post("/api/chat", { text: t }, true)); } finally { send.disabled = false; }
+}
+send.onclick = sendMsg;
+text.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendMsg(); } };
+fetch("/api/state").then(r => r.json()).then(render);
+</script>
+</body>
+</html>
